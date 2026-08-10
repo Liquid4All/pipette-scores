@@ -238,14 +238,18 @@ jobs:
           cd /tmp/digests
           # `tags` is space-separated bare tag names; expand each to -t <ref>.
           TAG_ARGS=()
+          TAG_COUNT=0
           for tag in ${TAGS}; do
             TAG_ARGS+=(-t "${IMAGE}:${tag}")
+            TAG_COUNT=$((TAG_COUNT + 1))
           done
           SOURCES=()
           for digest in *; do
             SOURCES+=("${IMAGE}@sha256:${digest}")
           done
-          echo "joining ${#SOURCES[@]} arch digests into ${#TAG_ARGS[@]} tag(s)"
+          # Count tags, not array slots: each tag contributes two entries to
+          # TAG_ARGS (`-t` and the ref), so ${#TAG_ARGS[@]} reads double.
+          echo "joining ${#SOURCES[@]} arch digests into ${TAG_COUNT} tag(s)"
           docker buildx imagetools create "${TAG_ARGS[@]}" "${SOURCES[@]}"
       - name: Inspect published manifest
         run: |
