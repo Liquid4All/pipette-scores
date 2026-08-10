@@ -2,12 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # Inert until a release branch exists: a push runs the workflow file as
+    # it stands on the pushed branch.
+    branches: [main, 'release/**']
   pull_request:
-    branches: [main]
+    # Release branches too, so a cherry-picked fix still gets CI.
+    branches: [main, 'release/**']
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Only pull requests supersede each other. Pushes key on run_id, so a second
+  # push to a release branch cannot cancel an in-flight publish.
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -15,13 +20,24 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      image: ${{ steps.version.outputs.image }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # ci/version.sh needs the history behind the branch point
       - name: Compute release metadata
         id: version
         run: |
-          VERSION="$(date -u +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          # Assign first: `echo "v=$(cmd)"` succeeds even when cmd fails, and
+          # the default shell is `bash -e` with no pipefail, so echoing the
+          # substitutions straight into tee would swallow the failure.
+          set -euo pipefail
+          version="$(ci/version.sh version)"
+          image="$(ci/version.sh image)"
+          {
+            echo "version=${version}"
+            echo "image=${image}"
+          } | tee -a "$GITHUB_OUTPUT"
 
   python-lint:
     runs-on: ubuntu-latest
@@ -87,11 +103,13 @@ jobs:
           print("bundled IFBench _upstream OK:", f)
           PY
 
-  # Per-arch Docker build on a native runner (no qemu). The image is built to
-  # prove the Dockerfile still works, but never published: this repository
-  # does not release. Publishing happens upstream.
+  # Per-arch build on a native runner (no qemu), pushing a digest with no tag.
+  # Tagging here would race the two runners against each other.
   docker-image-build:
     needs: [release-metadata, python-lint, python-test]
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -110,8 +128,14 @@ jobs:
           submodules: recursive
           lfs: true
       - uses: docker/setup-buildx-action@v4
-      # No registry login: nothing from this repository is pushed anywhere.
-      - name: Build image (never pushed)
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image (pushed by digest, except on pull requests)
         id: build
         uses: docker/build-push-action@v7
         env:
@@ -122,11 +146,97 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             APP_VERSION=${{ needs.release-metadata.outputs.version }}
-          # Build only. Never `push=true`, on any branch or event.
-          outputs: type=cacheonly
+          # A pull request proves the Dockerfile still builds; only main and
+          # release branches push. Digest-only push needs the `outputs` form,
+          # so the whole exporter switches rather than a `push:` flag.
+          outputs: >-
+            ${{ github.event_name == 'pull_request'
+              && 'type=cacheonly'
+              || format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', needs.release-metadata.outputs.image) }}
           # Per-arch + per-branch cache scope, with main as fallback so cold
           # PRs warm-start from the latest main cache.
           cache-from: |
             type=gha,scope=docker-${{ matrix.arch }}-${{ github.ref_name }}
             type=gha,scope=docker-${{ matrix.arch }}-main
           cache-to: type=gha,mode=max,scope=docker-${{ matrix.arch }}-${{ github.ref_name }}
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          # Filename is the digest; contents unused.
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v6
+        if: github.event_name != 'pull_request'
+        with:
+          name: docker-digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  docker-image-publish:
+    if: github.event_name != 'pull_request'
+    needs: [release-metadata, docker-image-build]
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: docker-digest-*
+          merge-multiple: true
+          path: /tmp/digests
+      - uses: docker/setup-buildx-action@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create and push manifest list
+        working-directory: /tmp/digests
+        env:
+          IMAGE: ${{ needs.release-metadata.outputs.image }}
+          VERSION: ${{ needs.release-metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            -t "${IMAGE}:${VERSION}" \
+            $(printf "${IMAGE}@sha256:%s " *)
+          # Read it back so a broken manifest fails here, not at pull time.
+          docker buildx imagetools inspect "${IMAGE}:${VERSION}"
+            break
+          done
+
+  # Main pushes the image; only a release branch also cuts a release. No assets:
+  # the deliverable is the image, carrying this same version as its tag.
+  github-release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
+    needs: [release-metadata, python-lint, python-test, wheel-smoke, docker-image-publish]
+    runs-on: ubuntu-latest
+    # Two pushes to one release branch must not race to create the same tag.
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub release
+        # Pinned: the only job here holding a repo-write token.
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: ${{ needs.release-metadata.outputs.version }}
+          name: ${{ needs.release-metadata.outputs.version }}
+          generate_release_notes: true
+          body: |
+            ### Container image
+
+            ```
+            docker pull ${{ needs.release-metadata.outputs.image }}:${{ needs.release-metadata.outputs.version }}
+            ```
+
+            Multi-arch (`linux/amd64`, `linux/arm64`).
+            This release ships as the image; no assets are attached.
