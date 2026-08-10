@@ -2,9 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # `release/**` publishes the train-versioned image (release/2026.08.1 ->
+    # ghcr.io/liquid4all/pipette-scores:2026.08.1). Inert until such a branch
+    # exists, since a push event runs the workflow file on the pushed branch.
+    branches: [main, 'release/**']
   pull_request:
-    branches: [main]
+    # Includes release branches so a fix cherry-picked onto a release train
+    # still gets CI before it lands.
+    branches: [main, 'release/**']
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -15,13 +20,46 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      image: ${{ steps.version.outputs.image }}
+      tags: ${{ steps.version.outputs.tags }}
     steps:
       - uses: actions/checkout@v6
       - name: Compute release metadata
         id: version
+        env:
+          # Empty on every event except pull_request; declared here so the
+          # `set -u` below doesn't trip on an unbound reference.
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          VERSION="$(date -u +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+          set -euo pipefail
+          # A release branch names the train it publishes:
+          # release/2026.08.1 -> 2026.08.1. Everywhere else keeps the
+          # date+sha snapshot version so main builds stay immutable.
+          case "${GITHUB_REF}" in
+            refs/heads/release/*) VERSION="${GITHUB_REF#refs/heads/release/}" ;;
+            *) VERSION="$(date -u +'%Y.%m.%d')-$(git rev-parse --short HEAD)" ;;
+          esac
+
+          # GHCR rejects uppercase path segments and the org is `Liquid4All`,
+          # so `github.repository` cannot be used verbatim.
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+
+          # Tags the manifest list gets. A pull request publishes a disposable
+          # `pr-<n>` tag so the push path is exercised before any release
+          # depends on it.
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            TAGS="pr-${PR_NUMBER}"
+          else
+            case "${GITHUB_REF}" in
+              refs/heads/release/*) TAGS="${VERSION}" ;;
+              *) TAGS="main ${VERSION}" ;;
+            esac
+          fi
+
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          echo "publishing ${IMAGE} with tags: ${TAGS}"
 
   python-lint:
     runs-on: ubuntu-latest
@@ -87,11 +125,17 @@ jobs:
           print("bundled IFBench _upstream OK:", f)
           PY
 
-  # Per-arch Docker build on a native runner (no qemu). The image is built to
-  # prove the Dockerfile still works, but never published: this repository
-  # does not release. Publishing happens upstream.
+  # Per-arch Docker build on a native runner (no qemu).
+  #
+  # Each arch pushes a *digest only* (no tag) to GHCR; docker-image-publish
+  # then joins the digests into one multi-arch manifest list and applies the
+  # tags. Tagging per-arch here instead would have the two runners race,
+  # each overwriting the other's tag with a single-arch image.
   docker-image-build:
     needs: [release-metadata, python-lint, python-test]
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -110,8 +154,15 @@ jobs:
           submodules: recursive
           lfs: true
       - uses: docker/setup-buildx-action@v4
-      # No registry login: nothing from this repository is pushed anywhere.
-      - name: Build image (never pushed)
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # The job-scoped `packages: write` token above. GHCR needs no
+          # configured secret, which is why it is the registry here.
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v7
         env:
@@ -122,11 +173,75 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             APP_VERSION=${{ needs.release-metadata.outputs.version }}
-          # Build only. Never `push=true`, on any branch or event.
-          outputs: type=cacheonly
+          outputs: type=image,name=${{ needs.release-metadata.outputs.image }},push-by-digest=true,name-canonical=true,push=true
           # Per-arch + per-branch cache scope, with main as fallback so cold
           # PRs warm-start from the latest main cache.
           cache-from: |
             type=gha,scope=docker-${{ matrix.arch }}-${{ github.ref_name }}
             type=gha,scope=docker-${{ matrix.arch }}-main
           cache-to: type=gha,mode=max,scope=docker-${{ matrix.arch }}-${{ github.ref_name }}
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          # The filename is the digest; the file itself stays empty. The
+          # publish job only needs the set of digests to join.
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: docker-digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Joins the per-arch digests into one multi-arch manifest list and applies
+  # the tags. Split from the build so the tag points at a manifest covering
+  # both arches rather than whichever runner finished last.
+  docker-image-publish:
+    needs: [release-metadata, docker-image-build]
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ needs.release-metadata.outputs.image }}
+      TAGS: ${{ needs.release-metadata.outputs.tags }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: docker-digest-*
+          merge-multiple: true
+          path: /tmp/digests
+      - uses: docker/setup-buildx-action@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create and push manifest list
+        run: |
+          set -euo pipefail
+          cd /tmp/digests
+          # `tags` is space-separated bare tag names; expand each to -t <ref>.
+          TAG_ARGS=()
+          for tag in ${TAGS}; do
+            TAG_ARGS+=(-t "${IMAGE}:${tag}")
+          done
+          SOURCES=()
+          for digest in *; do
+            SOURCES+=("${IMAGE}@sha256:${digest}")
+          done
+          echo "joining ${#SOURCES[@]} arch digests into ${#TAG_ARGS[@]} tag(s)"
+          docker buildx imagetools create "${TAG_ARGS[@]}" "${SOURCES[@]}"
+      - name: Inspect published manifest
+        run: |
+          set -euo pipefail
+          # Read back the first tag so a broken manifest fails here rather
+          # than at whatever pulls the image later.
+          for tag in ${TAGS}; do
+            docker buildx imagetools inspect "${IMAGE}:${tag}"
+            break
+          done
