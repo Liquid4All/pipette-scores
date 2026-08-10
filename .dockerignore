@@ -1,0 +1,25 @@
+# Version control
+.git
+.github
+
+# Build / env
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/*.egg-info
+
+# Per-package docs + tests are not needed in the image.
+**/docs
+**/tests
+
+# GPQA Diamond is gated — never bake it into the image (Docker ignores .gitignore).
+# The dataset is materialized + mounted at runtime, not shipped in the image.
+datasets/gpqa_diamond/
+
+# MATH-500 — keep eval data out of the image too; materialized + mounted at runtime.
+datasets/math_500/
+
+# IFBench — keep the third-party test set out of the image; materialized at runtime.
+datasets/ifbench/

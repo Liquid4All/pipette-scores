@@ -1,0 +1,23 @@
+*.pyc
+__pycache__/
+.venv/
+*.egg-info/
+.ruff_cache/
+.pytest_cache/
+
+# GPQA Diamond is gated (Idavidrein/gpqa); its terms forbid revealing examples
+# in plain text online. Nothing here is committed — the builder
+# (scripts/build_gpqa_diamond_dataset.py) is the single source of truth and
+# materializes the dataset (parquet + metadata.json) locally / at deploy.
+datasets/gpqa_diamond/
+
+# MATH-500 is MIT-licensed and redistributable, but we keep eval data out of the
+# repo regardless: the builder (scripts/build_math_500_dataset.py) is the single
+# source of truth and materializes it at deploy. Not committing it means we don't
+# redistribute, so no third-party license notice is required.
+datasets/math_500/
+
+# IFBench is AllenAI's third-party test set; keep it out of the repo like the
+# others. The builder (scripts/build_ifbench_dataset.py) materializes it from the
+# vendored vendor/ifbench submodule. Not committing it means we don't redistribute.
+datasets/ifbench/

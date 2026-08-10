@@ -1,0 +1,35 @@
+pipette-scores — third-party attribution
+
+This repository bundles and adapts third-party code. Full license texts are in
+THIRD_PARTY_LICENSES.md.
+
+Vendored verbatim
+- packages/pipette-scores/pipette_scores/scoring/math_500/prm800k/grading/ — the PRM800K
+  mathematical equivalence grader, from openai/prm800k (MIT, (c) 2023 OpenAI). Its
+  math_normalize.py is, per its header, largely copied from Hendrycks' MATH
+  `math_equivalence` (hendrycks/math, MIT, (c) 2021 Dan Hendrycks).
+- vendor/ifbench — the upstream IFBench scoring source, from allenai/IFBench
+  (Apache-2.0), vendored as a git submodule (LICENSE at vendor/ifbench/LICENSE).
+  At build time it is bundled into the wheel under
+  pipette_scores/scoring/ifbench/_upstream/ (including the LICENSE).
+
+Adapted
+- packages/pipette-scores/pipette_scores/scoring/math_500/math_generic.py — the robust-boxed
+  numeric normalization (`normalize_numeric_answer`) is copied from groq/openbench
+  `robust_boxed.py` (MIT, (c) 2025 Groq, Inc.).
+
+Liquid AI original work (extracted from the internal verifiers catalogue)
+- packages/pipette-scores/pipette_scores/scoring/gpqa_diamond/mcq.py and the answer-extraction /
+  orchestration in math_generic.py are Liquid AI's own clean-room implementation of
+  the publicly described Artificial Analysis benchmarking methodology. Artificial
+  Analysis publishes a methodology description, not source code; "AA" / "Artificial
+  Analysis" references in the code denote that methodology, not any third-party code.
+  This logic is fully owned by Liquid AI.
+
+Liquid AI original work — vendored from a separate Liquid repo
+- packages/pipette-scores/pipette_scores/scoring/ifstruct.py and the vendored
+  `vendor/ifstruct` validator are Liquid AI's own (Liquid4All/ifstruct); they carry
+  no third-party license and are covered by this repository's license.
+
+This repository's original work is licensed under the Apache License, Version 2.0.
+See LICENSE for the full license text.

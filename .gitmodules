@@ -1,0 +1,7 @@
+[submodule "vendor/ifstruct"]
+	path = vendor/ifstruct
+	url = https://github.com/Liquid4All/ifstruct.git
+	ignore = dirty
+[submodule "vendor/ifbench"]
+	path = vendor/ifbench
+	url = https://github.com/allenai/IFBench.git

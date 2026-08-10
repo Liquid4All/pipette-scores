@@ -1,0 +1,58 @@
+[project]
+name = "pipette-scores"
+version = "0.1.0"
+description = "API and scoring for LLM edge evaluations"
+requires-python = ">=3.12"
+authors = [{name = "Liquid AI"}]
+
+dependencies = [
+    "fastapi==0.128.1",
+    "uvicorn[standard]==0.40.0",
+    "gunicorn==25.0.0",
+    "pydantic>=2.0.0",
+    "datasets>=2.14.0",
+    "pandas>=2.0.0",
+    "pyarrow>=14.0.0",
+    "langdetect>=1.0.9",
+    "nltk>=3.8.0",
+    "immutabledict>=4.0.0",
+    "emoji>=2.0.0",
+    "syllapy>=0.7.2",
+    "numpy>=1.26.0",
+    "pyyaml>=6.0",
+    "setuptools>=69.0.0,<81",  # syllapy imports pkg_resources (removed in setuptools 81)
+    "tabulate>=0.9.0",
+    "ifstruct",
+    "sympy>=1.12",
+    "pylatexenc>=2.10",
+]
+
+[tool.uv.sources]
+ifstruct = { path = "../../vendor/ifstruct" }
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24.0", "httpx>=0.24.0", "ruff>=0.8.0"]
+
+[project.scripts]
+pipette-scores = "pipette_scores.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipette_scores"]
+
+# Bundle the pristine upstream IFBench source (vendor/ifbench submodule) into
+# the wheel so the installed package is self-contained and does not depend on
+# the repo layout at runtime. The adapter (scoring/ifbench/upstream.py) finds
+# these files inside site-packages; in editable/source installs it falls back
+# to the submodule path at the repo root.
+[tool.hatch.build.targets.wheel.force-include]
+"../../vendor/ifbench/evaluation_lib.py" = "pipette_scores/scoring/ifbench/_upstream/evaluation_lib.py"
+"../../vendor/ifbench/instructions.py" = "pipette_scores/scoring/ifbench/_upstream/instructions.py"
+"../../vendor/ifbench/instructions_registry.py" = "pipette_scores/scoring/ifbench/_upstream/instructions_registry.py"
+"../../vendor/ifbench/instructions_util.py" = "pipette_scores/scoring/ifbench/_upstream/instructions_util.py"
+"../../vendor/ifbench/LICENSE" = "pipette_scores/scoring/ifbench/_upstream/LICENSE"
+"../../NOTICE" = "pipette_scores/NOTICE"
+"../../THIRD_PARTY_LICENSES.md" = "pipette_scores/THIRD_PARTY_LICENSES.md"

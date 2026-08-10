@@ -1,0 +1,11 @@
+{
+  "eval_id": "ifstruct",
+  "dataset": "release_v1_0",
+  "source_dataset": "original",
+  "num_samples": 2000,
+  "repeats": 1,
+  "generation_params": {
+    "temperature": 0.6
+  },
+  "notes": "IFStruct v1.0 release test set"
+}

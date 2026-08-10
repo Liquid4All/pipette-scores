@@ -1,0 +1,20 @@
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv]
+environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/pipette-scores/tests", "packages/pipette-calibration/tests"]
+norecursedirs = ["vendor", "packages/pipette-scores/pipette_scores/vendor"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = [
+    "packages/pipette-scores/pipette_scores/vendor",
+    "packages/pipette-scores/pipette_scores/scoring/math_500/prm800k",
+    # Build-time-generated bundled IFBench source (force-included into the wheel).
+    "packages/pipette-scores/pipette_scores/scoring/ifbench/_upstream",
+    "vendor",
+]
