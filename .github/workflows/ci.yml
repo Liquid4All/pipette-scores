@@ -208,8 +208,6 @@ jobs:
             $(printf "${IMAGE}@sha256:%s " *)
           # Read it back so a broken manifest fails here, not at pull time.
           docker buildx imagetools inspect "${IMAGE}:${VERSION}"
-            break
-          done
 
   # Main pushes the image; only a release branch also cuts a release. No assets:
   # the deliverable is the image, carrying this same version as its tag.
