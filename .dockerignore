@@ -24,6 +24,16 @@ datasets/math_500/
 # IFBench — keep the third-party test set out of the image; materialized at runtime.
 datasets/ifbench/
 
+# The 7 VLM datasets are builder-only (docs/dataset-licenses.md) — never bake
+# them into the image; materialized + mounted at runtime.
+datasets/mme/
+datasets/mmstar/
+datasets/ocrbench/
+datasets/mmmu_val/
+datasets/realworldqa/
+datasets/mmbench_en_dev/
+datasets/pope/
+
 # ASR datasets (ESB, FLEURS: ~20 GB, SPGISpeech non-commercial, GigaSpeech
 # gated) — never bake them into the image; materialized + mounted at runtime.
 datasets/asr_*/

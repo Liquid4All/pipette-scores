@@ -7,22 +7,22 @@ Each eval has a dedicated scorer in `pipette_scores/scoring/`. The common flow i
 3. **Evaluate** — each completion's reasoning markup is rewritten (see [§7](#7-reasoning-markup-and-cut-off-reasoning)), then it is compared to its ground-truth sample, producing a `SampleScore(id, is_correct)`.
 4. **Enrich** — the API layer joins scores with the original prompts and completions and returns the full `ScoreResponse` (see `httpapi.md`).
 
-A completion whose `id` does not match any dataset sample will raise a `KeyError`. Clients should only submit IDs returned by the samples endpoint.
+`/score` answers 400 for a completion `id` that is not in the dataset. A direct call to a scorer raises `KeyError` for it. Submit only IDs that the samples endpoint returns.
 
-The scoreable evals are exactly the members of `pipette_scores.types.EvalId`: `ifbench`, `ifstruct`, `gpqa_diamond`, and `math_500`.
+The scoreable evals are the members of `pipette_scores.types.EvalId`: the text evals `ifbench`, `ifstruct`, `gpqa_diamond` and `math_500`, the 7 VLM evals ([§7](#vlm-evals)) and the 16 ASR evals ([§8](#8-asr-evals-open-asr-leaderboard-english-fleurs)).
 
 ## 1. Per-eval return shape
 
-Each per-eval `score()` returns `list[SampleScore]`:
+Each per-eval `score()` returns a pair `(scores, context)`:
 
 ```python
-[
-    SampleScore(id=str, is_correct=bool),
-    ...
-]
+(
+    [SampleScore(id=str, is_correct=bool), ...],
+    {"<metric>": ..., ...},  # pass@1, breakdowns, strict view
+)
 ```
 
-Totals and per-sample enrichment (messages, completion) are assembled at the API layer — scorers stay focused on correctness judgement.
+The context holds the eval's metrics. The API layer adds the messages and the completion to each sample score.
 
 For evals served with `metadata.repeats = N`, the samples endpoint expands each base id `<id>` into `N` salted ids `<id>#0 … <id>#(N-1)`; the scorer treats each `#k` as an ordinary sample, and the headline **pass@1** is the mean correctness across the repeats per base sample.
 
@@ -68,7 +68,7 @@ Competition mathematics; the model reasons step by step and gives its final answ
 
 The dataset version picks the grader through `metadata.grader`. Either way, reasoning markup is rewritten ([§7](#7-reasoning-markup-and-cut-off-reasoning)) and thinking tags are stripped first; the grader does its own answer extraction from what is left.
 
-- **`2026.06.1`, `math_generic`** (no `grader` key): `score_math_generic` from `pipette_scores/scoring/math_500/math_generic.py`. The boxed answer is extracted, then graded by the **PRM800K** symbolic grader (sympy equivalence — so `1/2` matches `0.5`, or reordered expressions match) with a **robust-boxed** numeric-normalization fallback. Served with `metadata.repeats = 5`. The context counts each grading path as `math_500_method/{prm800k,robust_boxed,no_match,failed}`.
+- **`2026.06.1`, `math_generic`** (no `grader` key): `score_math_generic` from `pipette_scores/scoring/math_500/math_generic.py`. The last `\boxed{}` answer is extracted (else the last number), then graded by the **PRM800K** symbolic grader (sympy equivalence — so `1/2` matches `0.5`, or reordered expressions match) with a **robust-boxed** numeric-normalization fallback. Served with `metadata.repeats = 5`. The context counts each grading path as `math_500_method/{prm800k,robust_boxed,no_match,failed}`.
 - **`2026.10.1`, `liquid_evals_math500`**: liquid_evals' `extract_math_answer` and `verify_math_answer`, vendored verbatim from `liquid_evals/parser.py` @ `d5534cf` as `pipette_scores/scoring/math_500/liquid_evals_parser.py`, called as `tasks/math500.py` calls them. `extract_math_answer` takes the last `\boxed{}` (brace-counted, so nested braces and boxes keep the outer content), else a `###`/`####` line, `ANSWER:`, "answer is …", "final answer" patterns, else the last number. `verify_math_answer` accepts an exact match, else tries `check_math_result` (Hendrycks' mathd normalization, or PRM800K-style sympy equivalence) on the extracted answer, then on the whole response with a leading "final answer:"/"answer:"/`###` removed, then on each of the response's last 150 lines. Sympy is skipped for expressions over 3000 characters, with more than two unknown letters, or with `^{`, `^(` or multi-digit exponents, and LaTeX with more than 100 macros is not parsed; there is no time limit. Served with `metadata.repeats = 5`. The context counts the pattern the answer came from as `math_500_extraction/{boxed,hash,answer_colon,answer_is,other,numeric,none}`; `math_500_unparsed_rate` is the `none` share.
 
 ---
@@ -89,9 +89,9 @@ Differences that remain by design:
 
 - **Generation is client-side.** The service serves prompts only. With no overrides, liquid_evals (in-process vLLM) samples at temperature 0.6, top_p 1.0 and top_k -1, with a fresh random seed per generate call. vLLM's repetition guard is on: a 2–128-token pattern repeated 10 times stops generation. Up to 32768 new tokens are allowed within a 32768-token context, capped to the model's base context. It applies the model's chat template with no system prompt. Pipette's clients set their own policy (temperature 0.6, no fixed seed) and stop runaway repetition with their own detector.
 - **Repeats.** `math500_std` generates once per problem, while `math_500` `2026.06.1` is served with 5 repeats. The expected pass@1 is the same, and the variance is lower. `math500` also runs once per problem, but the model-card number is the mean of 5 `math500` runs, each with a fresh seed. `2026.10.1` serves those 5 passes as 5 repeats in one cell, and pass@1 over the 2500 attempts equals the mean of the 5 per-pass scores.
-- **Crashes.** Where a liquid_evals checker raises and the whole run gets no score, the scorer here usually returns a verdict. For example, a JSON integer literal over 4300 digits fails the ifstruct sample, and a raising IFBench check counts as not followed for that response. Pathologically nested JSON (RecursionError) still fails on both sides; here `/score` returns HTTP 500 for the batch.
+- **Crashes.** Where a liquid_evals checker raises and the whole run gets no score, the scorer here usually returns a verdict. For example, a JSON integer literal over 4300 digits fails the ifstruct sample, and a raising IFBench check counts as not followed for that response. Pathologically nested JSON fails that ifstruct sample with a parse error, and the batch still gets a score.
 - **IFBench key 286.** liquid_evals reads that row's `n_start=0` as unset and picks a random span start on every call, so a correct answer passes about 1 time in 42. Here it always passes, which can raise ifbench pass@1 by up to 0.33 pp (5 of 1500 attempts).
-- **Denominators and dataset pins.** ifstruct's pass rate here counts only the completions submitted. liquid_evals counts every sample, so a missing completion is a fail there. The ifbench, gpqa_diamond and math_500 pass@1 keys here already count every sample. liquid_evals reads its Hugging Face datasets without a revision pin, while the datasets here are pinned by content hash. They are identical today.
+- **Denominators and dataset pins.** ifstruct's pass rate here counts only the completions submitted. liquid_evals counts every sample, so a missing completion is a fail there. The ifbench, gpqa_diamond and math_500 pass@1 keys here already count every sample. liquid_evals reads its Hugging Face datasets without a revision pin, while the third-party datasets here are pinned by content hash and ifstruct is committed. They are identical today.
 - **Reasoning markup.** liquid_evals strips only `<think>`, `[THINK]` and gpt-oss channels. The rewrite in [§7](#7-reasoning-markup-and-cut-off-reasoning) also reads Gemma 4, Cohere North and ERNIE markup. A completion without that markup gets the same verdict on both sides, whatever its stop reason, including one cut off inside its reasoning.
 - **Scale.** Scores here are 0–1 fractions; the internal eval scheduler shows them ×100.
 
@@ -101,7 +101,7 @@ Differences that remain by design:
 
 Module: `pipette_scores/scoring/completion_text.py` (`grading_text`)
 
-Every scorer grades `grading_text`'s output instead of the raw completion. The thinking-tag rules then run as before: `remove_thinking_tags` for ifbench, gpqa_diamond and math_500, and the validator's own copy for ifstruct, which therefore strips once.
+Every text-eval scorer grades `grading_text`'s output instead of the raw completion. The thinking-tag rules then run on that output: `remove_thinking_tags` for ifbench, gpqa_diamond and math_500, and the validator's own copy for ifstruct, which therefore strips once.
 
 **Markup rewrite** (`normalize_reasoning_markup`). Some models mark their reasoning or their answer with tokens the thinking-tag rules do not know. These are rewritten first:
 
@@ -123,10 +123,10 @@ Gemma 4 on vLLM without `--reasoning-parser gemma4` loses both channel tokens, w
 - gpt-oss cut inside its analysis channel has no `assistantfinal` transition and is graded whole.
 - A completion whose reasoning closed is graded on the answer after the close, even if the answer was cut.
 
-**Strict view.** Scorer `2026.10.12-552094f` graded such completions as empty instead. Each eval still reports that view in the response context:
+**Strict view.** The strict view grades such completions as empty. Each text eval reports it in the response context:
 
 - `<eval_id>_blanked_truncated` counts the completions it blanks. A completion is counted when the request carries `enable_thinking: true`, its `stop_reason` is `truncated` (the output-token cap or a full context) or `doom_loop` (a repetition stop: vLLM's `repetition_detection`, or an older client's detector), its rewritten text has no reasoning close (no `</think>`, `[/THINK]` or gpt-oss `assistantfinal` transition), and that text is not empty. A missing `stop_reason`, or `eos`, `failure` or `unknown`, is never counted.
-- `<eval_id>_pass_at_1_blanked` is the eval's pass@1 with those completions counted wrong: the headline that scorer reported. For ifstruct, which is served once per prompt, it is `pass_rate` with those completions counted wrong. Every eval fails an empty completion, so counting them wrong is the same as grading them empty.
+- `<eval_id>_pass_at_1_blanked` is the eval's pass@1 with those completions counted wrong. For ifstruct, which is served once per prompt, it is `pass_rate` with those completions counted wrong. Every eval fails an empty completion, so counting them wrong is the same as grading them empty.
 
 Content that a server-side reasoning parser already split (vLLM with `--reasoning-parser`, or gpt-oss's Harmony final channel) is the answer alone with no close. With thinking on, a cut answer there is counted even if its reasoning finished, so the strict view understates those cells.
 
@@ -151,13 +151,13 @@ Module: `split_reasoning`, `normalize_vlm_reasoning_markup`. The VLM scorers (mm
 | `unclosed_stop` | opened, no close, the model stopped on its own |
 | `no_reasoning` | no sign of reasoning |
 
-The context counts them as `reasoning_status`, a dict with all five keys. A profile whose wrapper reduces the reply to its answer (`minicpm_v_cot`, [httpapi](httpapi.md)) is read after that reduction, as main's strict view reads it: a `minicpm_v_cot` reply cut inside its thought has become its answer, so it counts as `unclosed_cut` and blanked only through `enable_thinking`, which its runs record. With a server-side reasoning parser the content is the answer alone, so a run that declared `enable_thinking` reads `unclosed_stop`; the count flags it and changes no grade.
+The context counts them as `reasoning_status`, a dict with all five keys. A profile whose wrapper reduces the reply to its answer (`minicpm_v_cot`, [httpapi](httpapi.md)) is read after that reduction: a `minicpm_v_cot` reply cut inside its thought has become its answer, so it counts as `unclosed_cut` and blanked only through `enable_thinking`, which its runs record. With a server-side reasoning parser the content is the answer alone, so a run that declared `enable_thinking` reads `unclosed_stop`; the count flags it and changes no grade.
 
 **Text graded.** The grading is liquid_evals', as above: a completion with no tag is graded whole, whatever its status. Complete blocks are removed (a block ends at the first close after its opener, and an opener inside it is part of it); the text through the first close that has no opener is reasoning (the first such `</think>`, else the first such `[/THINK]`, as `remove_thinking_tags` cuts), and a later stray close stays in the text; an opener left at the end removes the rest; then the gpt-oss transition and trailing harmony markers go. The two tag families pair with each other (`[THINK]…</think>`). Beyond that:
 
 - **Answer before close.** A reply that opens with a one-word answer, closes a block it never opened, and goes on to reasoning that gives no answer (`yes[/THINK][THINK]I need to determine…`, Ministral-3-Reasoning on yes/no questions) is graded on that word, when no opener was known. More than one word before the close is reasoning, as Ministral writes in `So the answer should be "yes".[/THINK]`, and such a reply is graded empty. Counted as `reasoning_answer_before_close`. The rules of liquid_evals grade such a reply empty.
 - **`unclosed_stop`.** When the opener is known from the profile or in the text and the model stopped without closing, a complete `<answer>…</answer>` in the reply is graded (the last one); without it the reply is graded as above.
-- **`<answer>` wrapper.** An `<answer>` that opens the text after a close and its closing tag are dropped, like the `<response>` and North wrappers of §7's table.
+- **`<answer>` wrapper.** When the reasoning was opened, an `<answer>` that opens the graded text and its closing tag are dropped, like the `<response>` and North wrappers of §7's table.
 
 **Strict view.** `blanked_truncated` counts a completion whose reasoning was opened by its own opener, by the run's prompt profile, or by `enable_thinking: true`, whose `stop_reason` is `truncated` or `doom_loop`, whose rewritten text has no close, and whose text is not empty, whatever the row recorded: a reply that opened its own thought and was cut counts even under `enable_thinking: false`. A reply cut inside reasoning that nothing shows was opened (a hidden control token, a profile or `enable_thinking` that does not say so) cannot be told from an answer, and is graded and counted as one.
 

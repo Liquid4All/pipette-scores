@@ -12,11 +12,13 @@ Base URL: `http://localhost:8000` (default uvicorn)
 
 ## 2. Caching
 
-The server caches loaded datasets in memory for the lifetime of the process, and the prompt samples of the four `(eval_id, dataset_name, prompt_profile)` combinations it served last: a VLM set holds its base64 images (POPE about 1.1 GB) and every profile is a set of its own, so an older one is rebuilt from its parquet when asked for again. The samples' digest ([§3.3](#33-get-evalseval_iddatasetsdataset_namesamplesdigest)) is cached too, but alone: the digest route builds the samples, hashes them and drops them, so a caller probing many combinations keeps a few bytes per combination resident rather than its samples. Cold builds run one at a time per process, on a thread of their own, so a burst of them after a deploy neither multiplies memory nor holds up `POST /score`.
+The server caches loaded datasets in memory for the lifetime of the process, and the prompt samples of the four `(eval_id, dataset_name, prompt_profile)` combinations it served last: a VLM set holds its base64 images (POPE about 1.1 GB) and every profile is a set of its own, so an older one is rebuilt from its parquet when asked for again. The samples' digest ([§3.3](#33-get-evalseval_iddatasetsdataset_namesamplesdigest)) is cached too, but alone: the digest route builds the samples, hashes them and drops them, so a caller probing many combinations keeps a few bytes per combination resident rather than its samples. Cold digest builds run one at a time per process, on a thread of their own, so a burst of them after a deploy neither multiplies memory nor holds up `POST /score`. A cold `/samples` load of a text or VLM set runs on the worker that takes the request and blocks that worker until the load completes.
 
 ---
 
 ## 3. Endpoints
+
+The server also serves an HTML index page at `GET /`. The OpenAPI schema leaves it out.
 
 ### 3.1. `GET /health`
 
@@ -184,17 +186,17 @@ Before grading, every eval rewrites reasoning markup that the thinking-tag rules
 
 **Response** `200 OK` — `ScoreResponse`
 
-`context` is a flat `string → JSON value` map of eval-specific aggregates (numbers typical, other scalars allowed). Every eval but the ASR evals (whose `context` is below) reports two keys for the strict view:
+`context` is a flat `string → JSON value` map of eval-specific aggregates (numbers typical, other scalars allowed). The text evals report two keys for the strict view:
 
 - `<eval_id>_blanked_truncated`: the number of completions it counts wrong. These are the completions with `enable_thinking: true`, a `stop_reason` of `truncated` or `doom_loop`, no reasoning close and some text.
 - `<eval_id>_pass_at_1_blanked`: the eval's pass@1 with those completions counted wrong.
 
-When either request field is missing, the count is 0 and the strict pass@1 equals the graded one.
+When either request field is missing, the count is 0 and the strict pass@1 equals the graded one. The VLM evals report one key, `blanked_truncated`: the number of such completions, where the reasoning can also open from the prompt profile or the text ([scoring](scoring.md#7-reasoning-markup-and-cut-off-reasoning)). The ASR evals report the `context` below.
 
 ```json
 {
-  "runtime_version": "2026.03.15-abcdef0",
-  "context": {"accuracy_EN": 0.95, "accuracy_FR_FR": 0.82},
+  "runtime_version": "2026.08.1-3-ga1b2c3d4ab",
+  "context": {"math_500_pass_at_1": 0.82, "math_500_blanked_truncated": 0, "math_500_pass_at_1_blanked": 0.82},
   "scored_samples": [
     {
       "id": "a1b2c3d4e5f6",

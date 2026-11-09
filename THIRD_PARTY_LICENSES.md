@@ -1,7 +1,7 @@
 # Third-party licenses
 
-`pipette-scores` vendors and adapts code from the projects below. Each entry's
-verbatim license text follows it.
+`pipette-scores` vendors and adapts code from the projects below. Each entry
+gives its verbatim license text or points to it in this file.
 
 The vendored `vendor/ifstruct` validator is Liquid AI's own
 (`Liquid4All/ifstruct`) — no third-party license; it is covered by this
@@ -28,7 +28,8 @@ Two copies are vendored:
 Source: https://github.com/allenai/IFBench
 
 Licensed under the Apache License, Version 2.0 (SPDX: `Apache-2.0`); full text
-in `vendor/ifbench/LICENSE` (identical in both copies). Upstream ships no `NOTICE` file. You may obtain a
+in [Apache License 2.0](#apache-license-20) below, and in `vendor/ifbench/LICENSE`
+(identical in both copies). Upstream ships no `NOTICE` file. You may obtain a
 copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
 
 IFBench data note: `packages/pipette-scores/scripts/build_ifbench_dataset.py`
@@ -66,17 +67,19 @@ Source: https://github.com/open-compass/VLMEvalKit
 
 Copyright 2023 VLMEvalKit Authors.
 
-Licensed under the Apache License, Version 2.0 (SPDX: `Apache-2.0`); the full
-text is the same as IFBench's, in `vendor/ifbench/LICENSE`. Upstream ships no
-`NOTICE` file. You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (SPDX: `Apache-2.0`); full text
+in [Apache License 2.0](#apache-license-20) below. Upstream ships no `NOTICE`
+file. You may obtain a copy of the License at
 http://www.apache.org/licenses/LICENSE-2.0.
 
 ---
 
 ## openai/prm800k — MIT
 
-Vendored: `packages/pipette-scores/pipette_scores/scoring/math_500/prm800k/grading/grader.py`,
-`packages/pipette-scores/pipette_scores/scoring/math_500/prm800k/grading/__init__.py`
+Vendored with modifications:
+`packages/pipette-scores/pipette_scores/scoring/math_500/prm800k/grading/grader.py`.
+The changes are a relative import and raw-string regex literals; the behavior is
+the same.
 Source: https://github.com/openai/prm800k
 
 The sympy grader in
@@ -110,7 +113,8 @@ SOFTWARE.
 
 `packages/pipette-scores/pipette_scores/scoring/math_500/prm800k/grading/math_normalize.py`
 is, per its own header, "largely copied from the Hendrycks' MATH release
-(math_equivalence)", and reaches this package vendored via prm800k.
+(math_equivalence)", and reaches this package vendored via prm800k (with
+raw-string regex literals; the behavior is the same).
 `mathd_normalize_answer` and `_strip_string` in
 `packages/pipette-scores/pipette_scores/scoring/math_500/liquid_evals_parser.py`
 ("Dan Hendrycks' code") reach it vendored via Liquid4All/liquid_evals.
@@ -264,7 +268,8 @@ SOFTWARE.
 
 ## Apache License 2.0
 
-The license of huggingface/datasets and huggingface/open_asr_leaderboard above
+The license of allenai/IFBench, open-compass/VLMEvalKit, huggingface/datasets
+and huggingface/open_asr_leaderboard above
 (the same text as this repository's `LICENSE`):
 
 ```text

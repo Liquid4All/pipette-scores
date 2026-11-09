@@ -14,8 +14,9 @@ revision, which is why they are vendored at a fixed commit rather than tracked
 through the `vendor/ifbench` submodule. That submodule is still the source of
 the IFBench **test set**; only the checker code comes from here.
 
-Git blob ids of the upstream files (the first commit that added this directory
-holds them unmodified):
+Git blob ids of the upstream files at `1a902f9`. The `vendor/ifbench`
+submodule history contains that commit, so
+`git -C vendor/ifbench ls-tree 1a902f9` lists them:
 
 | File | Blob |
 |---|---|

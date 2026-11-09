@@ -1,6 +1,6 @@
 # Datasets
 
-Each dataset backs one of the scoreable evals (`pipette_scores.types.EvalId`): the text evals `ifbench`, `ifstruct`, `gpqa_diamond`, `math_500` and the VLM evals `mme`, `mmstar`, `ocrbench`, `mmmu_val`, `realworldqa`, `mmbench_en_dev`, `pope`. Some are established public benchmarks, run verbatim; one (`ifstruct`) is a Liquid in-house creation.
+Each dataset backs one of the scoreable evals (`pipette_scores.types.EvalId`): the text evals `ifbench`, `ifstruct`, `gpqa_diamond`, `math_500` and the VLM evals `mme`, `mmstar`, `ocrbench`, `mmmu_val`, `realworldqa`, `mmbench_en_dev`, `pope` and the 16 ASR evals ([§16](#16-asr-evals-open-asr-leaderboard-english-fleurs)). Some are established public benchmarks, run verbatim; one (`ifstruct`) is a Liquid in-house creation.
 
 ## 1. Overview
 
@@ -29,17 +29,17 @@ $PIPETTE_SCORES_DATA_DIR/
   datasets/
     {eval_id}/
       {dataset_name}/
-        metadata.json        # version, repeats, provenance (upstream repo + revision + content_sha256)
+        metadata.json        # dataset (the version), repeats; for third-party sets, the source revision and content digest
         test.jsonl           # or a Parquet file, depending on the eval's loader
 ```
 
-- **`PIPETTE_SCORES_DATA_DIR`** — environment variable pointing to the data root. Defaults to the parent directory of the `pipette_scores` package.
-- **`dataset_name`** — the pinned dataset version (`ifbench` → `2026.06.1`, `ifstruct` → `release_v1_0`, `gpqa_diamond` → `2026.06.1`, `math_500` → `2026.06.1` and `2026.10.1`, all 7 VLM evals → `2026.10.1`).
-- **Committed vs materialized** — only the Liquid-owned `ifstruct` dataset is committed to the repo. The third-party datasets (`ifbench`, `gpqa_diamond`, `math_500`, and the 7 VLM evals) are gitignored and **materialized at deploy** from their pinned upstream revision by `packages/pipette-scores/scripts/build_<eval>_dataset.py` (a `content_sha256` in the metadata is self-asserted at build; the text-eval loaders re-verify it at load).
+- **`PIPETTE_SCORES_DATA_DIR`** — environment variable pointing to the data root. Defaults to the repository root (the directory that holds `datasets/`).
+- **`dataset_name`** — the pinned dataset version (`ifbench` → `2026.06.1`, `ifstruct` → `release_v1_0`, `gpqa_diamond` → `2026.06.1`, `math_500` → `2026.06.1` and `2026.10.1`, all 7 VLM evals → `2026.10.1`, the ASR evals → `2026.10.1`).
+- **Committed vs materialized** — only the Liquid-owned `ifstruct` dataset is committed to the repo. The third-party datasets (`ifbench`, `gpqa_diamond`, `math_500`, and the 7 VLM evals) are gitignored and **materialized at deploy** from their pinned upstream revision by `packages/pipette-scores/scripts/build_<eval>_dataset.py` (a `content_sha256` in the metadata is self-asserted at build; the text-eval loaders re-verify it at load, and the VLM loaders re-verify an image-free `metadata_content_sha256`).
 
 ## 3. Sample IDs
 
-All sample IDs are deterministic 12-character hex strings produced by SHA256 hashing a key derived from the sample content. The hash input varies per eval to ensure uniqueness. For evals with `metadata.repeats = N`, the samples endpoint additionally serves salted `<id>#0 … <id>#(N-1)` variants of each base id.
+All sample IDs are deterministic 12-character hex strings produced by SHA256 hashing a key derived from the sample. The text evals hash the prompt. The VLM and ASR evals hash the eval id and the row position. For evals with `metadata.repeats = N`, the samples endpoint additionally serves salted `<id>#0 … <id>#(N-1)` variants of each base id.
 
 ## 4. Prompt vs Scoring Samples
 

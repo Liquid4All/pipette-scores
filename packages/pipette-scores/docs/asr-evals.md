@@ -79,7 +79,7 @@ transcripts.
 them). Every set is for internal evaluation only here: pipette uses the sets
 only for internal, non-commercial benchmarking of its models, keeps them
 org-private, and never redistributes the built data
-(docs/dataset-licenses.md). SPGISpeech and URGENT24 are licensed for
+(the repository's `docs/dataset-licenses.md`). SPGISpeech and URGENT24 are licensed for
 non-commercial use only, and that is their only use here:
 
 | Set | License |
@@ -101,7 +101,8 @@ the leaderboard loads it (`normalizer/data_utils.load_data`; for Earnings22
 `transcript` as read by `get_text`, its `parent_id` and `chunk_index`), at the
 catalog's revision and in the split's row order. A clip's position, `doc_id`, is
 its row in the source split, and the sample id is `sha256("<eval_id>|<doc_id>")[:12]`.
-References: the leaderboard sets' `text`; FLEURS `transcription`; all stripped. The leaderboard's row filter
+References: the leaderboard sets' `text` (Earnings22: its call's `transcript`);
+FLEURS `transcription`; all stripped. The leaderboard's row filter
 is applied when scoring (§3). The build streams rows to the parquet one row
 group (64 clips) at a time.
 
@@ -131,8 +132,8 @@ it is no `--limit` smoke build. A full
 build of `2026.10.1` must match the catalog before its file lands.
 `scripts/verify_asr_datasets.py` runs all of it offline, plus every clip's hash.
 
-**Split sets.** git-LFS caps the size of one object (2 GB on most GitHub plans),
-and a set can be larger (SPGISpeech is 9.6 GB). `scripts/split_asr_dataset.py`
+**Split sets.** Some storage backends cap the size of one object (git-LFS: 2 GB
+on most GitHub plans), and a set can be larger (SPGISpeech is 9.6 GB). `scripts/split_asr_dataset.py`
 cuts a `test.parquet` over 1.9 GB into ordered parts `test-00000-of-0000N.parquet`,
 …, between row groups, with `metadata.json` copied unchanged. The server reads
 the parts as one table (`_asr_common.parquet_files`) and refuses both layouts at
@@ -393,8 +394,9 @@ over summed reference units (the leaderboard's `align_manifests`, for both
 protocols), never the mean of per-sample rates. On the leaderboard's English
 sets a sample whose normalized reference is empty or reads "ignore time segment
 in scoring" is not scored (`data_utils.is_target_text_in_range`, which
-`prepare_data` applies); its multilingual runs drop only an empty reference
-(`run_eval_ml.py`), and no FLEURS reference is empty. Earnings22 is scored per call
+`prepare_data` applies); its multilingual runs drop a reference that is empty or
+the ignore marker before normalization (`run_eval_ml.py`), and no FLEURS
+reference is either. Earnings22 is scored per call
 (`eval_utils.merge_chunked_manifest`): the chunks' stripped answers, empty ones
 skipped, joined with one space in `chunk_index` order, against the call's
 transcript.
@@ -611,4 +613,4 @@ the eval, dataset and profile. The digest covers everything served, the audio
 bytes included, so a pin taken from it names the exact requests the model is
 sent. The server reads one row group of source audio at a time and re-hashes
 each clip; `/score` reads no audio at all. The full contract:
-`docs/httpapi.md`.
+[httpapi.md](httpapi.md).

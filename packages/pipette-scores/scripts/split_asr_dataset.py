@@ -8,7 +8,7 @@ server reads them as one table (_asr_common.parquet_files).
 
     uv run --project packages/pipette-scores \\
         python packages/pipette-scores/scripts/split_asr_dataset.py \\
-        --src /data/pipette-scores/datasets --out <lfs-checkout>/datasets [EVAL_ID ...]
+        --src /data/pipette-scores/datasets --out <private-storage>/datasets [EVAL_ID ...]
 
 Writes ``<out>/<eval_id>/<version>/`` from ``<src>/<eval_id>/<version>/`` and then
 runs the server's integrity checks on the result (verify_asr_datasets.py re-hashes

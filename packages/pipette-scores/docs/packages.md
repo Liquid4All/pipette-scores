@@ -6,7 +6,7 @@
 
 ```bash
 pipette-scores packages --datasets s3://<bucket>/scores-datasets --packages s3://<bucket>/scores-packages
-pipette-scores packages --datasets "$PIPETTE_SCORES_DATA_DIR" --packages ./packages --eval mme pope --version 2026.11.03-abc1234
+pipette-scores packages --datasets "$PIPETTE_SCORES_DATA_DIR" --packages ./packages --eval mme pope --version 2026.11.1-0-ga1b2c3d4ab
 ```
 
 | Option | Description |
@@ -38,7 +38,7 @@ Written once per scores version and dataset, after all its packages are stored:
 {
   "eval_id": "asr_fleurs_nl_nl",
   "dataset_version": "2026.10.1",
-  "scores_version": "2026.11.03-abc1234",
+  "scores_version": "2026.11.1-0-ga1b2c3d4ab",
   "profiles": [
     {
       "prompt_profile": "gemma4",
@@ -52,4 +52,4 @@ Written once per scores version and dataset, after all its packages are stored:
 
 `prompt_profile` is `null` for a VLM set's own prompts. A catalog entry is pinned from an index entry: `[dataset]` `format`, `adapter = "evals-server@1"`, `digest`, `bytes`; `[dataset.upstream]` `source = "evals_server"`, `eval_id`, `dataset_version`, `prompt_profile`, and `identity`, the `samples_digest` without `sha256:`.
 
-With `PIPETTE_SCORES_PACKAGES` set to the store, the server reads `index/<PIPETTE_SCORES_VERSION>/<eval_id>/<dataset_version>.json` on the first digest request for a set it holds and takes every profile's digest from it; a set without an index file has its digest computed as before ([httpapi.md §3.3](httpapi.md#33-get-evalseval_iddatasetsdataset_namesamplesdigest)). A dataset version missing from the server's data directory is not found, even when the index lists it.
+With `PIPETTE_SCORES_PACKAGES` set to the store, the server reads `index/<PIPETTE_SCORES_VERSION>/<eval_id>/<dataset_version>.json` on the first digest request for a set it holds and takes every profile's digest from it; a set without an index file has its digest computed from its samples ([httpapi.md §3.3](httpapi.md#33-get-evalseval_iddatasetsdataset_namesamplesdigest)). A dataset version missing from the server's data directory is not found, even when the index lists it.

@@ -1,4 +1,4 @@
-# VLM benchmark dataset licenses
+# Benchmark dataset licenses (VLM and ASR)
 
 A license review (2026-07) of the 7 VLM benchmarks supported by
 `pipette-scores` concluded that **none of them may be redistributed in
@@ -8,7 +8,8 @@ locally / at deploy by the one-shot scripts
 `packages/pipette-scores/scripts/build_<eval>_dataset.py` from VLMEvalKit's
 pinned upstream TSVs, and the `datasets/<eval>/` directories are gitignored.
 This matches the existing repo practice for third-party text evals (ifbench,
-gpqa_diamond, math_500).
+gpqa_diamond, math_500). The ASR datasets follow the same rule (see
+[ASR datasets](#asr-datasets-open-asr-leaderboard-english-fleurs)).
 
 ## Summary
 
@@ -34,25 +35,28 @@ Notes:
 
 ## Distribution surfaces
 
-There are two ways this data could leave a machine, and both count as
+There are three ways this data could leave a machine, and all count as
 redistribution:
 
 1. **The repository.** Built datasets must never be committed. The
    `datasets/<eval>/` directories for all 7 benchmarks are gitignored, and
-   builders write only to those locations.
+   the builders write to those locations by default.
 2. **A hosted pipette-mgmt server.** When pipette-mgmt serves a VLM eval, it
    pushes the prompt samples — including base64-encoded benchmark images —
    to registered clients. Serving these benchmarks to clients outside your
    organization is distribution of the benchmark content. Operators should
    obtain legal sign-off before hosting these datasets on a publicly
    reachable pipette-mgmt instance.
+3. **The container image.** Built datasets must never go into an image. The
+   `datasets/<eval>/` directories of every builder-only set are dockerignored.
 
 ## Private storage
 
 Keep built VLM datasets only in the organization's private storage, under
 `<eval>/<version>/`. At deploy, an init container overlays them onto
 `PIPETTE_SCORES_DATA_DIR`, the same flow as the gated gpqa_diamond dataset.
-The service itself reads only its local data directory, never a bucket.
+The service reads datasets only from its local data directory, never from a
+bucket.
 Private storage does not lift the terms above: the copies remain
 internal-use only. In particular, do not share the RealWorldQA (CC-BY-ND)
 build onward publicly in any form.

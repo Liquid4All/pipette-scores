@@ -2,8 +2,12 @@
 
 Answer extraction and metrics for the 7 VLM evals are vendored from
 **VLMEvalKit** (commit `8eca8e5`), deterministic-only: no LLM judge, no random
-fallback — an answer `can_infer` cannot extract counts as **wrong** (the
-deterministic equivalent of VLMEvalKit's `exact_matching` policy).
+fallback. On the multiple-choice and yes/no evals, the vendored rule
+(`can_infer` or `YOrN_Extraction`) reads each answer first. The deterministic
+fallbacks in `scoring/vlm_answer.py` then read an answer that the rule cannot.
+An answer that neither reads counts as **wrong** (the deterministic equivalent
+of VLMEvalKit's `exact_matching` policy). The "Scoring" lines below name the
+vendored rule only.
 
 Module provenance:
 
@@ -149,24 +153,24 @@ scorers graded the same text: the completion with its reasoning removed.
   a line that opens with an option, the last line. VLMEvalKit hands those to
   its LLM judge, which pipette never uses. LFM2.5-VL-3B, which answers with a
   letter, has none; a reasoning model that explains its answer has many.
-- The check found one fallback misread, now fixed: "I cannot answer yes or no"
-  read as Yes (4 Gemma-4-E2B MME answers, 2.6 of 2,800 points).
-
-- A later audit of the final runs found the format Qwen3.5's card prompt asks
-  for, `"answer": "C"`, written three more ways the fallbacks missed: the key
+- A reply that names both "yes" and "no", such as "I cannot answer yes or no",
+  is not read as an answer.
+- The fallbacks also read the format that Qwen3.5's card prompt asks for,
+  `"answer": "C"`, in three more shapes: the key
   in backticks (`` `answer`: "C" ``), the value alone (`"B"`, `"a"`, an
   unclosed `"B`), and a quoted option line (`"B. Not the same"`). Each is read
   only in an anchored shape: the field as a whole line; the value alone as
   the whole answer, or as a last line (capital letter or exact option) after
   text that names no option letter. Prose that describes the format, refuses
-  to choose, or quotes two options is not read. Qwen3.5-4B RealWorldQA goes
-  from 42.0 to 79.3 (its card: 79.5); Qwen3.5-2B MMBench from 58.0 to 77.7.
-  No other family's score moves.
+  to choose, or quotes two options is not read. With these shapes read,
+  Qwen3.5-4B scores 79.3 on RealWorldQA (42.0 without them; its card: 79.5),
+  and Qwen3.5-2B scores 77.7 on MMBench (58.0 without them). No other family's
+  score changes.
 
 ## Prompt parity (verified against VLMEvalKit source)
 
-The served prompts match VLMEvalKit's dataset-default `build_prompt` verbatim,
-with NO extra instruction beyond what upstream emits:
+Without a prompt profile, the served prompts match VLMEvalKit's dataset-default
+`build_prompt` verbatim, with NO extra instruction beyond what upstream emits:
 
 - **MMStar / MMBench_DEV_EN_V11 / RealWorldQA** use the base `ImageMCQDataset.build_prompt`:
   `Question:` + `Options:\nA. …` + the soft directive
@@ -181,18 +185,15 @@ with NO extra instruction beyond what upstream emits:
 - **OCRBench** uses the raw question.
 
 Verbose models that describe the image instead of emitting the option letter
-are handled by `can_infer` extraction over the full generation (up to
-`max_new_tokens`), exactly as upstream does — not by a stricter prompt.
+are handled by `can_infer` and then the `vlm_answer` fallbacks, on the
+completion with its reasoning removed — not by a stricter prompt.
 
 ## Generation length
 
-`parameter_max_tokens` is set to **1024** for all 7, matching our VLMEvalKit
-fork (`vlmeval/vlm/liquid.py`, `max_new_tokens=1024`)
-so on-device pipette numbers are comparable to internal LFM VLMEvalKit runs.
-Generation length in VLMEvalKit is a per-*model* serving default, not a
-per-dataset constant (Qwen2-VL/LLaVA=2048, InternVL=4096/512/8196), so there
-is no single upstream value to copy — the LFM fork's 1024 is the one that
-makes our results comparable. It is a ceiling, not a target: answer-first
-models emit EOS in a handful of tokens (median 5 on LFM2-VL-450M mmstar); the
-budget only binds for reasoning/CoT models that state their answer last, which
-the previous tight caps (mme/pope 16, MCQ 64) would have silently clipped.
+The scorers grade the text that the client sends. Allow enough output tokens
+for the model to state its answer. The reference setting is **1024** output
+tokens for all 7 evals. In VLMEvalKit, generation length is a per-*model*
+serving default, not a per-dataset constant, so there is no single upstream
+value to copy. The limit is a ceiling, not a target. Models that answer first
+stop after a few tokens. Reasoning models that state their answer last need
+the full budget, and a lower limit cuts their answer off.

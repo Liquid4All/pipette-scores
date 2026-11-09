@@ -14,7 +14,7 @@ from pipette_scores.types import EvalId
 class ModelSpec:
     hf_id: str  # HuggingFace id (org/repo)
     mem: str  # sbatch --mem (host RAM), e.g. "16G"
-    base_shards: int  # shards, multiplied per-eval via EVAL_SHARD_MULTIPLIER
+    base_shards: int  # array-task count for the default dataset (see effective_shards)
 
 
 MODELS: tuple[ModelSpec, ...] = (

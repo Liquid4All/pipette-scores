@@ -69,8 +69,6 @@ jobs:
           cache-suffix: ${{ github.job }}
       - run: uv sync --extra dev
       - run: uv run pytest -x -q
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
   # The installed wheel loads IFBench from the bundled
   # `scoring/ifbench/_upstream` copy (force-included at build time); the editable

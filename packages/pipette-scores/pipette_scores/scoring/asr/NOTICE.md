@@ -16,7 +16,7 @@ leaderboard method is cited at):
 
 `normalizer.py` also holds the `BasicMultilingualTextNormalizer` the
 multilingual normalizer below builds on. Licensed under the Apache License 2.0
-(see the source headers).
+(see the header of `normalizer.py` and upstream's `LICENSE`).
 
 ## `open_asr_normalizer/multilingual.py` (multilingual, FLEURS)
 
