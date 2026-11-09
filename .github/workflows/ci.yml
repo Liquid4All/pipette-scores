@@ -74,7 +74,7 @@ jobs:
 
   # The installed wheel loads IFBench from the bundled
   # `scoring/ifbench/_upstream` copy (force-included at build time); the editable
-  # installs above only hit the submodule fallback. Do a non-editable install
+  # installs above only hit the vendor/ifbench-checkers fallback. Do a non-editable install
   # (mirrors the Docker build) and import through the bundled path, so a
   # packaging regression in the force-include block is caught.
   wheel-smoke:
@@ -99,6 +99,7 @@ jobs:
           f = evaluation_lib.__file__.replace("\\", "/")
           assert "site-packages" in f, f"not from installed pkg: {f}"
           assert "scoring/ifbench/_upstream" in f, f"not the bundled copy: {f}"
+          assert "pipette-scores:" in open(f).read(), f"not the patched vendor/ifbench-checkers copy: {f}"
           assert callable(test_instruction_following_loose)
           print("bundled IFBench _upstream OK:", f)
           PY

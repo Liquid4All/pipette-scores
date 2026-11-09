@@ -23,3 +23,7 @@ datasets/math_500/
 
 # IFBench — keep the third-party test set out of the image; materialized at runtime.
 datasets/ifbench/
+
+# ASR datasets (ESB, FLEURS: ~20 GB, SPGISpeech non-commercial, GigaSpeech
+# gated) — never bake them into the image; materialized + mounted at runtime.
+datasets/asr_*/

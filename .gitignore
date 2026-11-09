@@ -21,3 +21,23 @@ datasets/math_500/
 # others. The builder (scripts/build_ifbench_dataset.py) materializes it from the
 # vendored vendor/ifbench submodule. Not committing it means we don't redistribute.
 datasets/ifbench/
+
+# The 7 VLM benchmark datasets are builder-only: a license audit concluded none
+# may be redistributed in transformed form from this repo (RealWorldQA is
+# CC-BY-ND; the rest have non-commercial / uncleared-image terms — see
+# docs/dataset-licenses.md). The builders (scripts/build_<eval>_dataset.py)
+# materialize them locally / at deploy from VLMEvalKit's pinned upstream TSVs;
+# they must NEVER be committed.
+datasets/mme/
+datasets/mmstar/
+datasets/ocrbench/
+datasets/mmmu_val/
+datasets/realworldqa/
+datasets/mmbench_en_dev/
+datasets/pope/
+
+# The 16 ASR datasets (Open ASR Leaderboard, FLEURS) are builder-only too: SPGISpeech is
+# non-commercial and GigaSpeech gated (docs/dataset-licenses.md). The builder
+# (scripts/build_asr_datasets.py) refuses an output inside this checkout; this
+# is the backstop for one copied in. They must NEVER be committed.
+datasets/asr_*/

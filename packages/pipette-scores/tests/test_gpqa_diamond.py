@@ -27,6 +27,9 @@ def test_answer_out_of_domain_rejected(bad):
         ("Answer: A", "C", False),
         # reasoning is stripped before extraction, so the in-think "C" is ignored
         ("<think>maybe C</think> Answer: D", "D", True),
+        # same for a Gemma 4 thought channel; one cut off is all reasoning
+        ("<|channel>thought\nmaybe C<channel|>Answer: D", "D", True),
+        ("<|channel>thought\nAnswer: D? Check the units first", "D", False),
         # extractor only accepts A-D, so an out-of-range / unparseable answer fails
         ("I am not sure", "A", False),
     ],
@@ -71,6 +74,8 @@ def test_context_schema_stable_regardless_of_availability():
     assert isinstance(empty_ctx["gpqa_diamond_pass_at_1"], float)
     assert isinstance(empty_ctx["gpqa_diamond_pass_at_1_stderr"], float)
     assert isinstance(empty_ctx["gpqa_diamond_unparsed_rate"], float)
+    assert empty_ctx["gpqa_diamond_blanked_truncated"] == 0
+    assert isinstance(empty_ctx["gpqa_diamond_pass_at_1_blanked"], float)
     assert isinstance(empty_ctx["gpqa_diamond_pass_at_1_per_sample"], dict)
     # flat, fixed choice keys — always present (count 0 when a letter is unused)
     for choice in ["A", "B", "C", "D", "none"]:
@@ -92,3 +97,26 @@ def test_context_extraction_diagnostics():
     assert ctx["gpqa_diamond_choice/C"] == 0
     assert ctx["gpqa_diamond_choice/D"] == 0
     assert ctx["gpqa_diamond_choice/none"] == 1
+
+
+@pytest.mark.parametrize("stop_reason", ["truncated", "doom_loop"])
+@pytest.mark.parametrize("enable_thinking, blanked", [(True, 2), (False, 0), (None, 0)])
+def test_cut_reasoning_is_graded_raw_and_counted(stop_reason, enable_thinking, blanked):
+    samples = [_sample("q1", "B"), _sample("q2", "B"), _sample("q3", "B"), _sample("q4", "B")]
+    completions = [
+        # The prompt opened the reasoning and generation was cut: graded whole,
+        # as liquid_evals grades it.
+        SampleCompletion(id="q1", completion="Option B fits. Answer: B. Double-check option", stop_reason=stop_reason),
+        # The completion opened <think> itself: nothing is left to grade.
+        SampleCompletion(id="q2", completion="<think>Option B fits. Answer: B. Double-check", stop_reason=stop_reason),
+        # The reasoning closed.
+        SampleCompletion(id="q3", completion="Option B fits.\n</think>\nAnswer: B", stop_reason=stop_reason),
+        SampleCompletion(id="q4", completion="Option B fits.\n</think>\nAnswer: B", stop_reason="eos"),
+    ]
+    scores, ctx = score(completions, samples, enable_thinking=enable_thinking)
+    assert [s.is_correct for s in scores] == [True, False, True, True]
+    assert ctx["gpqa_diamond_pass_at_1"] == 0.75
+    assert ctx["gpqa_diamond_choice/none"] == 1
+    # The strict view counts q1 and q2 wrong; only q1 was correct.
+    assert ctx["gpqa_diamond_blanked_truncated"] == blanked
+    assert ctx["gpqa_diamond_pass_at_1_blanked"] == (0.5 if blanked else 0.75)

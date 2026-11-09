@@ -11,14 +11,15 @@ Plus shared infrastructure:
 
 - **`datasets/`** — LFS-tracked canonical eval datasets (parquet/jsonl).
 - **`vendor/ifstruct/`** — submodule: standalone IFStruct evaluator (`Liquid4All/ifstruct`).
-- **`vendor/ifbench/`** — submodule: upstream IFBench instruction checkers (`allenai/IFBench`).
+- **`vendor/ifbench/`** — submodule: upstream IFBench test set (`allenai/IFBench`).
+- **`vendor/ifbench-checkers/`** — the IFBench instruction checkers (`allenai/IFBench` @ `1a902f9`, the revision liquid_evals scores with), vendored with small service patches.
 - **`docker/pipette-scores.Dockerfile`** — production image for the scores service.
 
 ## Supported evals
 
 | Eval | Type | Description |
 |------|------|-------------|
-| `ifbench` | Generation | Instruction-following benchmark (backed by `vendor/ifbench`) |
+| `ifbench` | Generation | Instruction-following benchmark (test set from `vendor/ifbench`, checkers from `vendor/ifbench-checkers`) |
 | `ifstruct` | Generation | Structured format (JSON/YAML) generation (backed by `vendor/ifstruct`) |
 | `gpqa_diamond` | Generation | Graduate-level science MCQ (A–D), generative + regex extraction |
 | `math_500` | Generation | Competition math, `\boxed{}` answer graded by `score_math_generic` |
@@ -47,7 +48,7 @@ uv run ruff format --check
 
 ### Running the tests
 
-The full test suite runs with **no credentials and no network access**. All 152
+The full test suite runs with **no credentials and no network access**. All 266
 tests pass offline:
 
 ```bash
@@ -83,7 +84,7 @@ to run tests, lint, or the service against the other evals do not need it.
 
 Per-package docs:
 
-- Scores: [api reference](packages/pipette-scores/docs/httpapi.md) · [docker deployment](packages/pipette-scores/docs/docker.md) · [scoring logic](packages/pipette-scores/docs/scoring.md) · [datasets](packages/pipette-scores/docs/datasets.md)
+- Scores: [api reference](packages/pipette-scores/docs/httpapi.md) · [docker deployment](packages/pipette-scores/docs/docker.md) · [scoring logic](packages/pipette-scores/docs/scoring.md) · [datasets](packages/pipette-scores/docs/datasets.md) · [eval packages](packages/pipette-scores/docs/packages.md)
 - Calibration: [architecture](packages/pipette-calibration/docs/architecture.md) · [creating a dataset](packages/pipette-calibration/docs/creating-a-dataset.md) · [representative selection](packages/pipette-calibration/docs/representative-selection.md) · [verification](packages/pipette-calibration/docs/verification.md) · [slurm runs](packages/pipette-calibration/docs/slurm.md)
 
 ## License

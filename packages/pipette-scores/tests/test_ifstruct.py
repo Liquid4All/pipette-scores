@@ -1,3 +1,5 @@
+import pytest
+
 from pipette_scores.scoring.ifstruct import score
 from pipette_scores.types import IFStructSample, SampleCompletion
 
@@ -114,5 +116,72 @@ def test_score_context_shape_matches_build_summary():
         "by_top_level_structure",
         "by_entity_type",
         "common_errors",
+        "ifstruct_blanked_truncated",
+        "ifstruct_pass_at_1_blanked",
     }
     assert expected_keys <= set(context), context
+
+
+@pytest.mark.parametrize(
+    "completion",
+    [
+        # Cohere North on vLLM, thinking off: its text section wraps the JSON.
+        '<|START_TEXT|>{"name": "Alice"}<|END_TEXT|>',
+        # North, thinking on.
+        'Only a name is needed.<|END_THINKING|><|START_TEXT|>{"name": "Alice"}<|END_TEXT|>',
+        # ERNIE-4.5-Thinking: the prompt opened <think>, the answer is wrapped.
+        'Only a name is needed.\n</think>\n\n<response>\n{"name": "Alice"}\n</response>\n',
+        # ERNIE behind vLLM's ernie45 parser: the reasoning is gone, the wrapper stays.
+        '\n\n<response>\n```json\n{"name": "Alice"}\n```\n</response>\n',
+        # Gemma 4 on llama.cpp.
+        '<|channel>thought\nOnly a name is needed.<channel|>{"name": "Alice"}',
+    ],
+)
+def test_reasoning_markup_is_not_commentary(completion):
+    samples = [_sample("1", require_no_commentary=True)]
+    scores, _ = score([SampleCompletion(id="1", completion=completion)], samples)
+    assert scores[0].is_correct is True
+
+
+def test_reasoning_is_stripped_once():
+    # The validator strips thinking tags itself. Stripping before it as well
+    # would cut again at the </think> inside the JSON string.
+    completions = [SampleCompletion(id="1", completion='Plan.</think>{"name": "a </think> b"}')]
+    scores, _ = score(completions, [_sample("1")])
+    assert scores[0].is_correct is True
+
+
+@pytest.mark.parametrize("stop_reason", ["truncated", "doom_loop"])
+@pytest.mark.parametrize("enable_thinking, blanked", [(True, 1), (False, 0), (None, 0)])
+def test_cut_reasoning_is_graded_raw_and_counted(stop_reason, enable_thinking, blanked):
+    # The prompt opened the reasoning and generation was cut after a draft:
+    # graded whole, as liquid_evals grades it.
+    completion = 'Draft:\n```json\n{"name": "Alice"}\n```\nNow check whether the'
+    completions = [SampleCompletion(id="1", completion=completion, stop_reason=stop_reason)]
+    scores, context = score(completions, [_sample("1")], enable_thinking=enable_thinking)
+    assert scores[0].is_correct is True
+    assert context["pass_rate"] == 1.0
+    # The strict view counts it wrong.
+    assert context["ifstruct_blanked_truncated"] == blanked
+    assert context["ifstruct_pass_at_1_blanked"] == (0.0 if blanked else 1.0)
+
+
+def test_cut_reasoning_opened_in_text_fails():
+    # The completion opened <think> itself: everything from the tag on goes.
+    completion = '<think>Draft:\n```json\n{"name": "Alice"}\n```\nNow check whether the'
+    completions = [SampleCompletion(id="1", completion=completion, stop_reason="truncated")]
+    scores, context = score(completions, [_sample("1")], enable_thinking=True)
+    assert scores[0].is_correct is False
+    assert context["ifstruct_blanked_truncated"] == 1
+    assert context["ifstruct_pass_at_1_blanked"] == 0.0
+
+
+def test_runaway_nesting_fails_only_its_own_completion():
+    samples = [_sample("1"), _sample("2")]
+    completions = [
+        SampleCompletion(id="1", completion='{"name": "Alice"}'),
+        SampleCompletion(id="2", completion='{"name": [' + '{"name": [' * 20000),
+    ]
+    scores, context = score(completions, samples)
+    assert {s.id: s.is_correct for s in scores} == {"1": True, "2": False}
+    assert context["common_errors"].get("nesting too deep") == 1, context

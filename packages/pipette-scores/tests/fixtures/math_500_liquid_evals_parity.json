@@ -1,0 +1,988 @@
+{
+ "source": {
+  "repo": "Liquid4All/liquid_evals",
+  "commit": "d5534cfa17713b9fb2d1fe6626763d411380e9a8",
+  "path": "liquid_evals/parser.py",
+  "blob": "cd04c90839e366eb51d1071166d3727dcdcf0c99"
+ },
+ "extract": [
+  {
+   "text": "The answer is \\boxed{42}.",
+   "expected": "42"
+  },
+  {
+   "text": "\\boxed{\\frac{1}{2}}",
+   "expected": "\\frac{1}{2}"
+  },
+  {
+   "text": "\\boxed{\\frac{\\sqrt{3}}{2}}",
+   "expected": "\\frac{\\sqrt{3}}{2}"
+  },
+  {
+   "text": "first \\boxed{3}, then corrected: \\boxed{5}",
+   "expected": "5"
+  },
+  {
+   "text": "\\boxed{\\boxed{7}}",
+   "expected": "\\boxed{7}"
+  },
+  {
+   "text": "\\boxed{\\left( 3, \\frac{\\pi}{2} \\right)}",
+   "expected": "\\left( 3, \\frac{\\pi}{2} \\right)"
+  },
+  {
+   "text": "\\boxed{x \\in [-2, 7]}",
+   "expected": "x \\in [-2, 7]"
+  },
+  {
+   "text": "unbalanced \\boxed{3 so the result is 4",
+   "expected": "4"
+  },
+  {
+   "text": "\\boxed{}",
+   "expected": ""
+  },
+  {
+   "text": "empty box \\boxed{} then 12 apples",
+   "expected": "12"
+  },
+  {
+   "text": "\\boxed {9} has a space",
+   "expected": "9"
+  },
+  {
+   "text": "\\fbox{5} is not a boxed pattern",
+   "expected": "5"
+  },
+  {
+   "text": "\\boxed{5\\text{ cm}}",
+   "expected": "5\\text{ cm}"
+  },
+  {
+   "text": "\\boxed{90^\\circ}",
+   "expected": "90^\\circ"
+  },
+  {
+   "text": "$\\boxed{\\$18.90}$",
+   "expected": "\\$18.90"
+  },
+  {
+   "text": "Work.\n#### 18",
+   "expected": "18"
+  },
+  {
+   "text": "Work.\n### Final Answer\n5",
+   "expected": "Final Answer"
+  },
+  {
+   "text": "### 6\nmore text\n### 7",
+   "expected": "7"
+  },
+  {
+   "text": "ANSWER: 7",
+   "expected": "7"
+  },
+  {
+   "text": "answer: x = 3\nmore",
+   "expected": "x = 3"
+  },
+  {
+   "text": "The answer is [3, 4]",
+   "expected": "3, 4"
+  },
+  {
+   "text": "the answer is {x+1}",
+   "expected": "x+1"
+  },
+  {
+   "text": "So the answer is (B).",
+   "expected": "B"
+  },
+  {
+   "text": "Hence the answer is 12. Done",
+   "expected": "12"
+  },
+  {
+   "text": "The final answer is 9",
+   "expected": "9"
+  },
+  {
+   "text": "Final answer: 2/3",
+   "expected": "2/3"
+  },
+  {
+   "text": "Answer: -4",
+   "expected": "-4"
+  },
+  {
+   "text": "We get 3.5 apples\n\n",
+   "expected": "3.5"
+  },
+  {
+   "text": "The total is 1,000 dollars",
+   "expected": "000"
+  },
+  {
+   "text": "no numbers here",
+   "expected": ""
+  },
+  {
+   "text": "",
+   "expected": ""
+  },
+  {
+   "text": "<think>\\boxed{1}</think>\\boxed{2}",
+   "expected": "2"
+  }
+ ],
+ "check": [
+  {
+   "given": "42",
+   "truth": "42",
+   "mathd_normalize_given": "42",
+   "normalize_given": "42",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "\\frac{1}{2}",
+   "truth": "\\frac12",
+   "mathd_normalize_given": "\\frac{1}{2}",
+   "normalize_given": "1/2",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "0.5",
+   "truth": "\\frac{1}{2}",
+   "mathd_normalize_given": "\\frac{1}{2}",
+   "normalize_given": "0.5",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "1/2",
+   "truth": "\\frac{1}{2}",
+   "mathd_normalize_given": "\\frac{1}{2}",
+   "normalize_given": "1/2",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "2/4",
+   "truth": "\\frac{1}{2}",
+   "mathd_normalize_given": "\\frac{2}{4}",
+   "normalize_given": "2/4",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "\\dfrac{3}{4}",
+   "truth": "\\frac34",
+   "mathd_normalize_given": "\\frac{3}{4}",
+   "normalize_given": "3/4",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "\\tfrac{3}{4}",
+   "truth": "0.75",
+   "mathd_normalize_given": "\\frac{3}{4}",
+   "normalize_given": "3/4",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "10\\%",
+   "truth": "10",
+   "mathd_normalize_given": "10",
+   "normalize_given": "10",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "10%",
+   "truth": "10",
+   "mathd_normalize_given": "10",
+   "normalize_given": "10",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "5 \\text{ cm}",
+   "truth": "5",
+   "mathd_normalize_given": "5",
+   "normalize_given": "5",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "5\\text{ cm}\\text{ m}",
+   "truth": "5",
+   "mathd_normalize_given": "5\\text{ cm}\\text{ m}",
+   "normalize_given": "5m",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "5 cm",
+   "truth": "5",
+   "mathd_normalize_given": "5cm",
+   "normalize_given": "5",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "12 inches",
+   "truth": "12",
+   "mathd_normalize_given": "12inches",
+   "normalize_given": "12",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "3 feet",
+   "truth": "3",
+   "mathd_normalize_given": "3feet",
+   "normalize_given": "3",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "90^\\circ",
+   "truth": "90",
+   "mathd_normalize_given": "90",
+   "normalize_given": "90",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "90^{\\circ}",
+   "truth": "90",
+   "mathd_normalize_given": "90",
+   "normalize_given": "90^∘",
+   "mathd": true,
+   "sympy": false,
+   "check": true
+  },
+  {
+   "given": "\\$5",
+   "truth": "5",
+   "mathd_normalize_given": "5",
+   "normalize_given": "5",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "$5.00",
+   "truth": "5",
+   "mathd_normalize_given": "$5.00",
+   "normalize_given": "5",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "x=3",
+   "truth": "3",
+   "mathd_normalize_given": "3",
+   "normalize_given": "x=3",
+   "mathd": true,
+   "sympy": false,
+   "check": true
+  },
+  {
+   "given": "k = 3",
+   "truth": "3",
+   "mathd_normalize_given": "3",
+   "normalize_given": "k=3",
+   "mathd": true,
+   "sympy": false,
+   "check": true
+  },
+  {
+   "given": "y = 2x + 1",
+   "truth": "2x+1",
+   "mathd_normalize_given": "2x+1",
+   "normalize_given": "y=2x+1",
+   "mathd": true,
+   "sympy": false,
+   "check": true
+  },
+  {
+   "given": "(1,2)",
+   "truth": "(1, 2)",
+   "mathd_normalize_given": "(1,2)",
+   "normalize_given": "(1,2)",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "[1,2)",
+   "truth": "(1,2)",
+   "mathd_normalize_given": "[1,2)",
+   "normalize_given": "[1,2)",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "(1,2,3)",
+   "truth": "(1,2)",
+   "mathd_normalize_given": "(1,2,3)",
+   "normalize_given": "(1,2,3)",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "(-\\infty, 3]",
+   "truth": "(-\\infty,3]",
+   "mathd_normalize_given": "(-\\infty,3]",
+   "normalize_given": "(-inf,3]",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "\\left( 3, \\frac{\\pi}{2} \\right)",
+   "truth": "\\left( 3, \\frac{\\pi}{2} \\right)",
+   "mathd_normalize_given": "(3,\\frac{\\pi}{2})",
+   "normalize_given": "(3,pi/2)",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "(3, \\pi/2)",
+   "truth": "\\left( 3, \\frac{\\pi}{2} \\right)",
+   "mathd_normalize_given": "(3,\\pi/2)",
+   "normalize_given": "(3,pi/2)",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "1,000",
+   "truth": "1000",
+   "mathd_normalize_given": "1,000",
+   "normalize_given": "1000",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "1,000,000",
+   "truth": "10^6",
+   "mathd_normalize_given": "1,000,000",
+   "normalize_given": "1000000",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "3 million",
+   "truth": "3000000",
+   "mathd_normalize_given": "3million",
+   "normalize_given": "3*10^6",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "7 3/4",
+   "truth": "\\frac{31}{4}",
+   "mathd_normalize_given": "\\frac{73}{4}",
+   "normalize_given": "7+3/4",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "\\sqrt{2}/2",
+   "truth": "\\frac{\\sqrt{2}}{2}",
+   "mathd_normalize_given": "\\sqrt{2}/2",
+   "normalize_given": "sqrt(2)/2",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "2\\sqrt3",
+   "truth": "2\\sqrt{3}",
+   "mathd_normalize_given": "2\\sqrt{3}",
+   "normalize_given": "2sqrt(3)",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "2\\sqrt",
+   "truth": "2\\sqrt{3}",
+   "mathd_normalize_given": "2\\sqrt",
+   "normalize_given": "2\\sqrt",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "\\frac",
+   "truth": "\\frac{1}{2}",
+   "mathd_normalize_given": "\\frac",
+   "normalize_given": "%s/%s",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "\\pi",
+   "truth": "\\pi",
+   "mathd_normalize_given": "\\pi",
+   "normalize_given": "pi",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "2\\pi",
+   "truth": "\\pi*2",
+   "mathd_normalize_given": "2\\pi",
+   "normalize_given": "2pi",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "\\infty",
+   "truth": "\\infty",
+   "mathd_normalize_given": "\\infty",
+   "normalize_given": "inf",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "x^2+2x+1",
+   "truth": "(x+1)^2",
+   "mathd_normalize_given": "x^2+2x+1",
+   "normalize_given": "x^2+2x+1",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "x^{2}+2x+1",
+   "truth": "(x+1)^2",
+   "mathd_normalize_given": "x^{2}+2x+1",
+   "normalize_given": "x^2+2x+1",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "2^10",
+   "truth": "1024",
+   "mathd_normalize_given": "2^10",
+   "normalize_given": "2^10",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "1024",
+   "truth": "2^{10}",
+   "mathd_normalize_given": "1024",
+   "normalize_given": "1024",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "abc",
+   "truth": "abd",
+   "mathd_normalize_given": "abc",
+   "normalize_given": "abc",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "\\text{Monday}",
+   "truth": "\\text{Monday}",
+   "mathd_normalize_given": "Monday",
+   "normalize_given": "mon",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "monday",
+   "truth": "\\text{Monday}",
+   "mathd_normalize_given": "monday",
+   "normalize_given": "mon",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "Monday",
+   "truth": "\\text{(C)}",
+   "mathd_normalize_given": "Monday",
+   "normalize_given": "mon",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "C",
+   "truth": "\\text{(C)}",
+   "mathd_normalize_given": "C",
+   "normalize_given": "c",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "(C)",
+   "truth": "\\text{(C)}",
+   "mathd_normalize_given": "(C)",
+   "normalize_given": "(c)",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "1 and 2",
+   "truth": "1, 2",
+   "mathd_normalize_given": "1and2",
+   "normalize_given": "1,2",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "1 or 2",
+   "truth": "1,2",
+   "mathd_normalize_given": "1or2",
+   "normalize_given": "1,2",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "\\{1,2\\}",
+   "truth": "1,2",
+   "mathd_normalize_given": "\\{1,2\\}",
+   "normalize_given": "1,2",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "10",
+   "truth": "10.0",
+   "mathd_normalize_given": "10",
+   "normalize_given": "10",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "3.0",
+   "truth": "3",
+   "mathd_normalize_given": "3.0",
+   "normalize_given": "3",
+   "mathd": false,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "-3",
+   "truth": "- 3",
+   "mathd_normalize_given": "-3",
+   "normalize_given": "-3",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": ".5",
+   "truth": "0.5",
+   "mathd_normalize_given": "\\frac{1}{2}",
+   "normalize_given": ".5",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "\\!1\\!000",
+   "truth": "1000",
+   "mathd_normalize_given": "1000",
+   "normalize_given": "1000",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "\\frac{1}{3}",
+   "truth": "0.333",
+   "mathd_normalize_given": "\\frac{1}{3}",
+   "normalize_given": "1/3",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "0.333",
+   "truth": "\\frac{1}{3}",
+   "mathd_normalize_given": "0.333",
+   "normalize_given": "0.333",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "1e400",
+   "truth": "1",
+   "mathd_normalize_given": "1e400",
+   "normalize_given": "1e400",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "nan",
+   "truth": "nan",
+   "mathd_normalize_given": "nan",
+   "normalize_given": "nan",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  },
+  {
+   "given": "",
+   "truth": "5",
+   "mathd_normalize_given": "",
+   "normalize_given": "",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "5",
+   "truth": "",
+   "mathd_normalize_given": "5",
+   "normalize_given": "5",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "The answer is 4",
+   "truth": "4",
+   "mathd_normalize_given": "Theansweris4",
+   "normalize_given": "theansweris4",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "4",
+   "truth": "The answer is 4",
+   "mathd_normalize_given": "4",
+   "normalize_given": "4",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "x = \\frac{-b}{2a}",
+   "truth": "-\\frac{b}{2a}",
+   "mathd_normalize_given": "\\frac{-b}{2a}",
+   "normalize_given": "x=-b/2a",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x",
+   "truth": "1600x",
+   "mathd_normalize_given": "x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x",
+   "normalize_given": "x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x+x",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "\\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha \\alpha",
+   "truth": "1",
+   "mathd_normalize_given": "\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha",
+   "normalize_given": "\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha\\alpha",
+   "mathd": false,
+   "sympy": false,
+   "check": false
+  },
+  {
+   "given": "\\begin{pmatrix} 1 \\\\ 2 \\end{pmatrix}",
+   "truth": "\\begin{pmatrix} 1 \\\\ 2 \\end{pmatrix}",
+   "mathd_normalize_given": "\\begin{pmatrix}1\\2\\end{pmatrix}",
+   "normalize_given": "[1;2]",
+   "mathd": true,
+   "sympy": true,
+   "check": true
+  }
+ ],
+ "verify": [
+  {
+   "raw": "So the answer is \\boxed{42}.",
+   "gold": "42",
+   "predicted": "42",
+   "correct": true
+  },
+  {
+   "raw": "So the answer is \\boxed{41}.",
+   "gold": "42",
+   "predicted": "41",
+   "correct": false
+  },
+  {
+   "raw": "\\boxed{\\frac{\\sqrt{3}}{2}}",
+   "gold": "\\frac{\\sqrt{3}}{2}",
+   "predicted": "\\frac{\\sqrt{3}}{2}",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{\\dfrac{\\sqrt3}{2}}",
+   "gold": "\\frac{\\sqrt{3}}{2}",
+   "predicted": "\\dfrac{\\sqrt3}{2}",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{\\boxed{7}}",
+   "gold": "7",
+   "predicted": "\\boxed{7}",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{5\\text{ cm}}",
+   "gold": "5",
+   "predicted": "5\\text{ cm}",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{5 \\text{cm}}",
+   "gold": "5",
+   "predicted": "5 \\text{cm}",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{90^\\circ}",
+   "gold": "90^\\circ",
+   "predicted": "90^\\circ",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{(3, \\frac{\\pi}{2})}",
+   "gold": "\\left( 3, \\frac{\\pi}{2} \\right)",
+   "predicted": "(3, \\frac{\\pi}{2})",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{\\text{(C)}}",
+   "gold": "\\text{(C)}",
+   "predicted": "\\text{(C)}",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{C}",
+   "gold": "\\text{(C)}",
+   "predicted": "C",
+   "correct": true
+  },
+  {
+   "raw": "The answer is 7",
+   "gold": "7",
+   "predicted": "7",
+   "correct": true
+  },
+  {
+   "raw": "Therefore, the final answer is 12",
+   "gold": "12",
+   "predicted": "12",
+   "correct": true
+  },
+  {
+   "raw": "Final answer: 5",
+   "gold": "5",
+   "predicted": "5",
+   "correct": true
+  },
+  {
+   "raw": "We compute.\nFinal answer: 5",
+   "gold": "5",
+   "predicted": "5",
+   "correct": true
+  },
+  {
+   "raw": "We compute 3 + 4.\nIt is 7 apples",
+   "gold": "7",
+   "predicted": "7",
+   "correct": true
+  },
+  {
+   "raw": "no answer here at all",
+   "gold": "7",
+   "predicted": "",
+   "correct": false
+  },
+  {
+   "raw": "",
+   "gold": "7",
+   "predicted": "",
+   "correct": false
+  },
+  {
+   "raw": "Hmm.\nMonday",
+   "gold": "\\text{Monday}",
+   "predicted": "",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{3}\nThe answer is 4",
+   "gold": "4",
+   "predicted": "3",
+   "correct": false
+  },
+  {
+   "raw": "\\boxed{3}\n4",
+   "gold": "4",
+   "predicted": "3",
+   "correct": true
+  },
+  {
+   "raw": "4\nstep 0 of the work\nstep 1 of the work\nstep 2 of the work\nstep 3 of the work\nstep 4 of the work\nstep 5 of the work\nstep 6 of the work\nstep 7 of the work\nstep 8 of the work\nstep 9 of the work\nstep 10 of the work\nstep 11 of the work\nstep 12 of the work\nstep 13 of the work\nstep 14 of the work\nstep 15 of the work\nstep 16 of the work\nstep 17 of the work\nstep 18 of the work\nstep 19 of the work\nstep 20 of the work\nstep 21 of the work\nstep 22 of the work\nstep 23 of the work\nstep 24 of the work\nstep 25 of the work\nstep 26 of the work\nstep 27 of the work\nstep 28 of the work\nstep 29 of the work\nstep 30 of the work\nstep 31 of the work\nstep 32 of the work\nstep 33 of the work\nstep 34 of the work\nstep 35 of the work\nstep 36 of the work\nstep 37 of the work\nstep 38 of the work\nstep 39 of the work\nstep 40 of the work\nstep 41 of the work\nstep 42 of the work\nstep 43 of the work\nstep 44 of the work\nstep 45 of the work\nstep 46 of the work\nstep 47 of the work\nstep 48 of the work\nstep 49 of the work\nstep 50 of the work\nstep 51 of the work\nstep 52 of the work\nstep 53 of the work\nstep 54 of the work\nstep 55 of the work\nstep 56 of the work\nstep 57 of the work\nstep 58 of the work\nstep 59 of the work\nstep 60 of the work\nstep 61 of the work\nstep 62 of the work\nstep 63 of the work\nstep 64 of the work\nstep 65 of the work\nstep 66 of the work\nstep 67 of the work\nstep 68 of the work\nstep 69 of the work\nstep 70 of the work\nstep 71 of the work\nstep 72 of the work\nstep 73 of the work\nstep 74 of the work\nstep 75 of the work\nstep 76 of the work\nstep 77 of the work\nstep 78 of the work\nstep 79 of the work\nstep 80 of the work\nstep 81 of the work\nstep 82 of the work\nstep 83 of the work\nstep 84 of the work\nstep 85 of the work\nstep 86 of the work\nstep 87 of the work\nstep 88 of the work\nstep 89 of the work\nstep 90 of the work\nstep 91 of the work\nstep 92 of the work\nstep 93 of the work\nstep 94 of the work\nstep 95 of the work\nstep 96 of the work\nstep 97 of the work\nstep 98 of the work\nstep 99 of the work\nstep 100 of the work\nstep 101 of the work\nstep 102 of the work\nstep 103 of the work\nstep 104 of the work\nstep 105 of the work\nstep 106 of the work\nstep 107 of the work\nstep 108 of the work\nstep 109 of the work\nstep 110 of the work\nstep 111 of the work\nstep 112 of the work\nstep 113 of the work\nstep 114 of the work\nstep 115 of the work\nstep 116 of the work\nstep 117 of the work\nstep 118 of the work\nstep 119 of the work\nstep 120 of the work\nstep 121 of the work\nstep 122 of the work\nstep 123 of the work\nstep 124 of the work\nstep 125 of the work\nstep 126 of the work\nstep 127 of the work\nstep 128 of the work\nstep 129 of the work\nstep 130 of the work\nstep 131 of the work\nstep 132 of the work\nstep 133 of the work\nstep 134 of the work\nstep 135 of the work\nstep 136 of the work\nstep 137 of the work\nstep 138 of the work\nstep 139 of the work\nstep 140 of the work\nstep 141 of the work\nstep 142 of the work\nstep 143 of the work\nstep 144 of the work\nstep 145 of the work\nstep 146 of the work\nstep 147 of the work\n\\boxed{3}",
+   "gold": "4",
+   "predicted": "3",
+   "correct": true
+  },
+  {
+   "raw": "4\nstep 0 of the work\nstep 1 of the work\nstep 2 of the work\nstep 3 of the work\nstep 4 of the work\nstep 5 of the work\nstep 6 of the work\nstep 7 of the work\nstep 8 of the work\nstep 9 of the work\nstep 10 of the work\nstep 11 of the work\nstep 12 of the work\nstep 13 of the work\nstep 14 of the work\nstep 15 of the work\nstep 16 of the work\nstep 17 of the work\nstep 18 of the work\nstep 19 of the work\nstep 20 of the work\nstep 21 of the work\nstep 22 of the work\nstep 23 of the work\nstep 24 of the work\nstep 25 of the work\nstep 26 of the work\nstep 27 of the work\nstep 28 of the work\nstep 29 of the work\nstep 30 of the work\nstep 31 of the work\nstep 32 of the work\nstep 33 of the work\nstep 34 of the work\nstep 35 of the work\nstep 36 of the work\nstep 37 of the work\nstep 38 of the work\nstep 39 of the work\nstep 40 of the work\nstep 41 of the work\nstep 42 of the work\nstep 43 of the work\nstep 44 of the work\nstep 45 of the work\nstep 46 of the work\nstep 47 of the work\nstep 48 of the work\nstep 49 of the work\nstep 50 of the work\nstep 51 of the work\nstep 52 of the work\nstep 53 of the work\nstep 54 of the work\nstep 55 of the work\nstep 56 of the work\nstep 57 of the work\nstep 58 of the work\nstep 59 of the work\nstep 60 of the work\nstep 61 of the work\nstep 62 of the work\nstep 63 of the work\nstep 64 of the work\nstep 65 of the work\nstep 66 of the work\nstep 67 of the work\nstep 68 of the work\nstep 69 of the work\nstep 70 of the work\nstep 71 of the work\nstep 72 of the work\nstep 73 of the work\nstep 74 of the work\nstep 75 of the work\nstep 76 of the work\nstep 77 of the work\nstep 78 of the work\nstep 79 of the work\nstep 80 of the work\nstep 81 of the work\nstep 82 of the work\nstep 83 of the work\nstep 84 of the work\nstep 85 of the work\nstep 86 of the work\nstep 87 of the work\nstep 88 of the work\nstep 89 of the work\nstep 90 of the work\nstep 91 of the work\nstep 92 of the work\nstep 93 of the work\nstep 94 of the work\nstep 95 of the work\nstep 96 of the work\nstep 97 of the work\nstep 98 of the work\nstep 99 of the work\nstep 100 of the work\nstep 101 of the work\nstep 102 of the work\nstep 103 of the work\nstep 104 of the work\nstep 105 of the work\nstep 106 of the work\nstep 107 of the work\nstep 108 of the work\nstep 109 of the work\nstep 110 of the work\nstep 111 of the work\nstep 112 of the work\nstep 113 of the work\nstep 114 of the work\nstep 115 of the work\nstep 116 of the work\nstep 117 of the work\nstep 118 of the work\nstep 119 of the work\nstep 120 of the work\nstep 121 of the work\nstep 122 of the work\nstep 123 of the work\nstep 124 of the work\nstep 125 of the work\nstep 126 of the work\nstep 127 of the work\nstep 128 of the work\nstep 129 of the work\nstep 130 of the work\nstep 131 of the work\nstep 132 of the work\nstep 133 of the work\nstep 134 of the work\nstep 135 of the work\nstep 136 of the work\nstep 137 of the work\nstep 138 of the work\nstep 139 of the work\nstep 140 of the work\nstep 141 of the work\nstep 142 of the work\nstep 143 of the work\nstep 144 of the work\nstep 145 of the work\nstep 146 of the work\nstep 147 of the work\nstep 148 of the work\n\\boxed{3}",
+   "gold": "4",
+   "predicted": "3",
+   "correct": false
+  },
+  {
+   "raw": "4\n\nstep 0 of the work\nstep 1 of the work\nstep 2 of the work\nstep 3 of the work\nstep 4 of the work\nstep 5 of the work\nstep 6 of the work\nstep 7 of the work\nstep 8 of the work\nstep 9 of the work\nstep 10 of the work\nstep 11 of the work\nstep 12 of the work\nstep 13 of the work\nstep 14 of the work\nstep 15 of the work\nstep 16 of the work\nstep 17 of the work\nstep 18 of the work\nstep 19 of the work\nstep 20 of the work\nstep 21 of the work\nstep 22 of the work\nstep 23 of the work\nstep 24 of the work\nstep 25 of the work\nstep 26 of the work\nstep 27 of the work\nstep 28 of the work\nstep 29 of the work\nstep 30 of the work\nstep 31 of the work\nstep 32 of the work\nstep 33 of the work\nstep 34 of the work\nstep 35 of the work\nstep 36 of the work\nstep 37 of the work\nstep 38 of the work\nstep 39 of the work\nstep 40 of the work\nstep 41 of the work\nstep 42 of the work\nstep 43 of the work\nstep 44 of the work\nstep 45 of the work\nstep 46 of the work\nstep 47 of the work\nstep 48 of the work\nstep 49 of the work\nstep 50 of the work\nstep 51 of the work\nstep 52 of the work\nstep 53 of the work\nstep 54 of the work\nstep 55 of the work\nstep 56 of the work\nstep 57 of the work\nstep 58 of the work\nstep 59 of the work\nstep 60 of the work\nstep 61 of the work\nstep 62 of the work\nstep 63 of the work\nstep 64 of the work\nstep 65 of the work\nstep 66 of the work\nstep 67 of the work\nstep 68 of the work\nstep 69 of the work\nstep 70 of the work\nstep 71 of the work\nstep 72 of the work\nstep 73 of the work\nstep 74 of the work\nstep 75 of the work\nstep 76 of the work\nstep 77 of the work\nstep 78 of the work\nstep 79 of the work\nstep 80 of the work\nstep 81 of the work\nstep 82 of the work\nstep 83 of the work\nstep 84 of the work\nstep 85 of the work\nstep 86 of the work\nstep 87 of the work\nstep 88 of the work\nstep 89 of the work\nstep 90 of the work\nstep 91 of the work\nstep 92 of the work\nstep 93 of the work\nstep 94 of the work\nstep 95 of the work\nstep 96 of the work\nstep 97 of the work\nstep 98 of the work\nstep 99 of the work\nstep 100 of the work\nstep 101 of the work\nstep 102 of the work\nstep 103 of the work\nstep 104 of the work\nstep 105 of the work\nstep 106 of the work\nstep 107 of the work\nstep 108 of the work\nstep 109 of the work\nstep 110 of the work\nstep 111 of the work\nstep 112 of the work\nstep 113 of the work\nstep 114 of the work\nstep 115 of the work\nstep 116 of the work\nstep 117 of the work\nstep 118 of the work\nstep 119 of the work\nstep 120 of the work\nstep 121 of the work\nstep 122 of the work\nstep 123 of the work\nstep 124 of the work\nstep 125 of the work\nstep 126 of the work\nstep 127 of the work\nstep 128 of the work\nstep 129 of the work\nstep 130 of the work\nstep 131 of the work\nstep 132 of the work\nstep 133 of the work\nstep 134 of the work\nstep 135 of the work\nstep 136 of the work\nstep 137 of the work\nstep 138 of the work\nstep 139 of the work\nstep 140 of the work\nstep 141 of the work\nstep 142 of the work\nstep 143 of the work\nstep 144 of the work\nstep 145 of the work\nstep 146 of the work\nstep 147 of the work\n\\boxed{3}",
+   "gold": "4",
+   "predicted": "3",
+   "correct": true
+  },
+  {
+   "raw": "4\n\n\nstep 0 of the work\nstep 1 of the work\nstep 2 of the work\nstep 3 of the work\nstep 4 of the work\nstep 5 of the work\nstep 6 of the work\nstep 7 of the work\nstep 8 of the work\nstep 9 of the work\nstep 10 of the work\nstep 11 of the work\nstep 12 of the work\nstep 13 of the work\nstep 14 of the work\nstep 15 of the work\nstep 16 of the work\nstep 17 of the work\nstep 18 of the work\nstep 19 of the work\nstep 20 of the work\nstep 21 of the work\nstep 22 of the work\nstep 23 of the work\nstep 24 of the work\nstep 25 of the work\nstep 26 of the work\nstep 27 of the work\nstep 28 of the work\nstep 29 of the work\nstep 30 of the work\nstep 31 of the work\nstep 32 of the work\nstep 33 of the work\nstep 34 of the work\nstep 35 of the work\nstep 36 of the work\nstep 37 of the work\nstep 38 of the work\nstep 39 of the work\nstep 40 of the work\nstep 41 of the work\nstep 42 of the work\nstep 43 of the work\nstep 44 of the work\nstep 45 of the work\nstep 46 of the work\nstep 47 of the work\nstep 48 of the work\nstep 49 of the work\nstep 50 of the work\nstep 51 of the work\nstep 52 of the work\nstep 53 of the work\nstep 54 of the work\nstep 55 of the work\nstep 56 of the work\nstep 57 of the work\nstep 58 of the work\nstep 59 of the work\nstep 60 of the work\nstep 61 of the work\nstep 62 of the work\nstep 63 of the work\nstep 64 of the work\nstep 65 of the work\nstep 66 of the work\nstep 67 of the work\nstep 68 of the work\nstep 69 of the work\nstep 70 of the work\nstep 71 of the work\nstep 72 of the work\nstep 73 of the work\nstep 74 of the work\nstep 75 of the work\nstep 76 of the work\nstep 77 of the work\nstep 78 of the work\nstep 79 of the work\nstep 80 of the work\nstep 81 of the work\nstep 82 of the work\nstep 83 of the work\nstep 84 of the work\nstep 85 of the work\nstep 86 of the work\nstep 87 of the work\nstep 88 of the work\nstep 89 of the work\nstep 90 of the work\nstep 91 of the work\nstep 92 of the work\nstep 93 of the work\nstep 94 of the work\nstep 95 of the work\nstep 96 of the work\nstep 97 of the work\nstep 98 of the work\nstep 99 of the work\nstep 100 of the work\nstep 101 of the work\nstep 102 of the work\nstep 103 of the work\nstep 104 of the work\nstep 105 of the work\nstep 106 of the work\nstep 107 of the work\nstep 108 of the work\nstep 109 of the work\nstep 110 of the work\nstep 111 of the work\nstep 112 of the work\nstep 113 of the work\nstep 114 of the work\nstep 115 of the work\nstep 116 of the work\nstep 117 of the work\nstep 118 of the work\nstep 119 of the work\nstep 120 of the work\nstep 121 of the work\nstep 122 of the work\nstep 123 of the work\nstep 124 of the work\nstep 125 of the work\nstep 126 of the work\nstep 127 of the work\nstep 128 of the work\nstep 129 of the work\nstep 130 of the work\nstep 131 of the work\nstep 132 of the work\nstep 133 of the work\nstep 134 of the work\nstep 135 of the work\nstep 136 of the work\nstep 137 of the work\nstep 138 of the work\nstep 139 of the work\nstep 140 of the work\nstep 141 of the work\nstep 142 of the work\nstep 143 of the work\nstep 144 of the work\nstep 145 of the work\nstep 146 of the work\nstep 147 of the work\n\\boxed{3}",
+   "gold": "4",
+   "predicted": "3",
+   "correct": true
+  },
+  {
+   "raw": "<think>maybe \\boxed{7}</think>\nSo \\boxed{42}",
+   "gold": "42",
+   "predicted": "42",
+   "correct": true
+  },
+  {
+   "raw": "<think>maybe \\boxed{42}</think>\nSo \\boxed{7}",
+   "gold": "42",
+   "predicted": "7",
+   "correct": false
+  },
+  {
+   "raw": "reasoning \\boxed{42}</think>\nThe answer is \\boxed{42}",
+   "gold": "42",
+   "predicted": "42",
+   "correct": true
+  },
+  {
+   "raw": "reasoning so far \\boxed{42} wait</think>",
+   "gold": "42",
+   "predicted": "",
+   "correct": false
+  },
+  {
+   "raw": "Partial work, so \\boxed{42}? Check the sign of",
+   "gold": "42",
+   "predicted": "42",
+   "correct": true
+  },
+  {
+   "raw": "Start.<think>long reasoning \\boxed{42} that was cut",
+   "gold": "42",
+   "predicted": "",
+   "correct": false
+  },
+  {
+   "raw": "[THINK]x\\boxed{1}[/THINK]\\boxed{2}",
+   "gold": "2",
+   "predicted": "2",
+   "correct": true
+  },
+  {
+   "raw": "analysisWe need 2+2.assistantfinal\\boxed{4}",
+   "gold": "4",
+   "predicted": "4",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{0.5}",
+   "gold": "\\frac{1}{2}",
+   "predicted": "0.5",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{2/4}",
+   "gold": "\\frac{1}{2}",
+   "predicted": "2/4",
+   "correct": false
+  },
+  {
+   "raw": "\\boxed{x^2 + 2x + 1}",
+   "gold": "(x+1)^2",
+   "predicted": "x^2 + 2x + 1",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{1,\\!000}",
+   "gold": "1000",
+   "predicted": "1,\\!000",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{\\$18.90}",
+   "gold": "\\$18.90",
+   "predicted": "\\$18.90",
+   "correct": true
+  },
+  {
+   "raw": "\\boxed{18.9}",
+   "gold": "\\$18.90",
+   "predicted": "18.9",
+   "correct": true
+  }
+ ]
+}

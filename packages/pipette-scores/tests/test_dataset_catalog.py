@@ -4,7 +4,7 @@ import pytest
 
 from pipette_scores.dataset_catalog import list_dataset_names, load_eval_samples, load_prompt_samples
 from pipette_scores.repeats import logical_id
-from pipette_scores.types import EvalId, EvalSample, IFBenchSample
+from pipette_scores.types import EvalId, EvalSample, IFBenchSample, Math500Grader
 
 
 def test_list_dataset_names_empty(tmp_path):
@@ -95,6 +95,31 @@ def test_math_500_integrity_mismatch_raises(math_500_dataset_dir):
     (math_500_dataset_dir / "metadata.json").write_text(json.dumps(meta))
     root = math_500_dataset_dir.parent.parent.parent
     with pytest.raises(ValueError, match="integrity check failed"):
+        load_eval_samples(EvalId.MATH_500, "test_ds", root_dir=root)
+
+
+def test_math_500_grader_defaults_to_math_generic(math_500_dataset_dir):
+    # 2026.06.1's metadata.json predates the grader key.
+    root = math_500_dataset_dir.parent.parent.parent
+    samples = load_eval_samples(EvalId.MATH_500, "test_ds", root_dir=root)
+    assert {s.grader for s in samples} == {Math500Grader.MATH_GENERIC}
+
+
+def test_math_500_grader_from_metadata(math_500_dataset_dir):
+    meta = json.loads((math_500_dataset_dir / "metadata.json").read_text())
+    meta["grader"] = "liquid_evals_math500"
+    (math_500_dataset_dir / "metadata.json").write_text(json.dumps(meta))
+    root = math_500_dataset_dir.parent.parent.parent
+    samples = load_eval_samples(EvalId.MATH_500, "test_ds", root_dir=root)
+    assert {s.grader for s in samples} == {Math500Grader.LIQUID_EVALS_MATH500}
+
+
+def test_math_500_unknown_grader_raises(math_500_dataset_dir):
+    meta = json.loads((math_500_dataset_dir / "metadata.json").read_text())
+    meta["grader"] = "liquid_evals"
+    (math_500_dataset_dir / "metadata.json").write_text(json.dumps(meta))
+    root = math_500_dataset_dir.parent.parent.parent
+    with pytest.raises(ValueError, match="metadata.grader must be one of"):
         load_eval_samples(EvalId.MATH_500, "test_ds", root_dir=root)
 
 

@@ -5,7 +5,7 @@ from typing import Any
 from pipette_scores.scoring.gpqa_diamond.mcq import score_mcq
 
 from pipette_scores.repeats import logical_id
-from pipette_scores.scoring.completion_text import remove_thinking_tags
+from pipette_scores.scoring.completion_text import grading_text, remove_thinking_tags
 from pipette_scores.types import GPQADiamondSample, SampleCompletion, SampleScore
 
 # GPQA Diamond is a 4-option MCQ (Artificial Analysis methodology).
@@ -13,15 +13,15 @@ _VALID_OPTIONS = "ABCD"
 
 
 def score(
-    completions: list[SampleCompletion], samples: list[GPQADiamondSample]
+    completions: list[SampleCompletion], samples: list[GPQADiamondSample], *, enable_thinking: bool | None = None
 ) -> tuple[list[SampleScore], dict[str, Any]]:
     """Score GPQA Diamond completions against the correct option letter.
 
     Each completion is run through the Artificial Analysis MCQ extractor
     (``score_mcq`` from this eval's ``mcq`` module, with ``valid_options="ABCD"``):
     the chosen letter is extracted from the response (after reasoning is
-    stripped via ``remove_thinking_tags``) and compared to the ground-truth
-    letter.
+    stripped via ``grading_text`` and ``remove_thinking_tags``) and compared to
+    the ground-truth letter.
 
     AA methodology runs each question with repeats (R=5) and reports pass@1
     over the N·R rows. Repeats are realized as ``#k`` salted ids (see
@@ -33,8 +33,11 @@ def score(
 
     Context keys: ``gpqa_diamond_pass_at_1`` (+ ``_stderr`` and ``_per_sample``
     breakdown by logical id), ``gpqa_diamond_unparsed_rate`` (fraction of
-    received completions whose answer couldn't be extracted), and flat
-    ``gpqa_diamond_choice/{A,B,C,D,none}`` counts.
+    received completions whose answer couldn't be extracted),
+    ``gpqa_diamond_blanked_truncated`` (completions cut short inside their
+    reasoning, which the strict view grades as empty, see ``grading_text``),
+    ``gpqa_diamond_pass_at_1_blanked`` (pass@1 with those counted wrong), and
+    flat ``gpqa_diamond_choice/{A,B,C,D,none}`` counts.
     """
     by_id = {s.id: s for s in samples}
     scores: list[SampleScore] = []
@@ -43,14 +46,19 @@ def score(
     # couldn't parse one) so the context can distinguish a wrong answer from an
     # extraction miss — a low score that's really a formatting/parse problem.
     choices: Counter[str] = Counter()
+    blanked = 0
+    blanked_correct = 0
 
     for c in completions:
         sample = by_id[c.id]
-        text = remove_thinking_tags(c.completion)
+        text, cut = grading_text(c, enable_thinking)
+        text = remove_thinking_tags(text)
         result = score_mcq(text, sample.answer, valid_options=_VALID_OPTIONS)
         scores.append(SampleScore(id=c.id, is_correct=result.correct))
         if result.correct:
             correct += 1
+        blanked += cut
+        blanked_correct += cut and result.correct
         choices[result.extracted or "none"] += 1
 
     n_samples = len(samples)
@@ -73,6 +81,8 @@ def score(
         # Of the completions we received, the fraction whose answer couldn't be
         # extracted (counts as wrong) — separates "wrong answer" from "unparsable".
         "gpqa_diamond_unparsed_rate": choices["none"] / n_completions if n_completions else 0.0,
+        "gpqa_diamond_blanked_truncated": blanked,
+        "gpqa_diamond_pass_at_1_blanked": (correct - blanked_correct) / n_samples if n_samples else 0.0,
     }
     # Flat, fixed-key choice distribution (counts), mirroring ifbench's
     # `/`-delimited breakdown keys. Always emit every key (A-D + none) so the

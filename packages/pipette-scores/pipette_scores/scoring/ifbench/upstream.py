@@ -1,11 +1,13 @@
-"""Adapter that exposes the pristine ``vendor/ifbench`` submodule as a package.
+"""Adapter that exposes the vendored IFBench checkers as a package.
 
-Upstream IFBench ships four top-level modules (``evaluation_lib``,
-``instructions``, ``instructions_registry``, ``instructions_util``) that
-import each other by bare name. We don't want to patch upstream, so the
-bootstrap below:
+The checkers are allenai/IFBench at the revision Liquid4All/liquid_evals
+scores its ``ifbench_aa`` task with (``vendor/ifbench-checkers``; see its
+README for the commit and the local changes). They ship four top-level modules
+(``evaluation_lib``, ``instructions``, ``instructions_registry``,
+``instructions_util``) that import each other by bare name. We don't want to
+rewrite those imports, so the bootstrap below:
 
-1. Temporarily prepends the submodule dir to ``sys.path`` so the bare
+1. Temporarily prepends the checker dir to ``sys.path`` so the bare
    imports resolve.
 2. Imports the four modules in dependency order (primes ``sys.modules``).
 3. Rehomes them under ``pipette_scores.scoring.ifbench._upstream.*`` so
@@ -23,15 +25,15 @@ import sys
 
 # `_upstream/` is NOT in the source tree — it is generated at wheel-build time by
 # the `[tool.hatch.build.targets.wheel.force-include]` block in
-# packages/pipette-scores/pyproject.toml, which copies the `vendor/ifbench`
-# submodule's scoring files (+ LICENSE) into the wheel. So:
-#   - installed wheel  -> bundled copy at _upstream/        (_BUNDLED)
-#   - editable/source  -> fall back to the vendor/ifbench submodule (_REPO)
+# packages/pipette-scores/pyproject.toml, which copies the checker files in
+# `vendor/ifbench-checkers` (+ LICENSE) into the wheel. So:
+#   - installed wheel  -> bundled copy at _upstream/          (_BUNDLED)
+#   - editable/source  -> fall back to vendor/ifbench-checkers (_REPO)
 # CI exercises the bundled path via the `wheel-smoke` job (see .github/workflows).
 _BUNDLED = pathlib.Path(__file__).resolve().parent / "_upstream"
 # parents climb from .../pipette_scores/scoring/ifbench/upstream.py:
 # ifbench[0] scoring[1] pipette_scores[2] pipette-scores[3] packages[4] <repo>[5].
-_REPO = pathlib.Path(__file__).resolve().parents[5] / "vendor" / "ifbench"
+_REPO = pathlib.Path(__file__).resolve().parents[5] / "vendor" / "ifbench-checkers"
 
 if (_BUNDLED / "evaluation_lib.py").exists():
     _SRC = _BUNDLED
@@ -39,9 +41,9 @@ elif (_REPO / "evaluation_lib.py").exists():
     _SRC = _REPO
 else:
     raise RuntimeError(
-        "IFBench source not found. Expected either a bundled copy at "
-        f"{_BUNDLED} (installed wheel) or the submodule at {_REPO} "
-        "(editable install — run `git submodule update --init vendor/ifbench`)."
+        "IFBench checkers not found. Expected either a bundled copy at "
+        f"{_BUNDLED} (installed wheel) or the vendored copy at {_REPO} "
+        "(editable install)."
     )
 
 _MODULES = ("instructions_util", "instructions", "instructions_registry", "evaluation_lib")

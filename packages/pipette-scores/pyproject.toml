@@ -14,7 +14,9 @@ dependencies = [
     "pandas>=2.0.0",
     "pyarrow>=14.0.0",
     "langdetect>=1.0.9",
-    "nltk>=3.8.0",
+    # IFBench verdicts depend on the tokenizer (3.9.4 splits dashes into their own
+    # tokens); this matches the nltk that the internal liquid_evals environments lock.
+    "nltk==3.9.4",
     "immutabledict>=4.0.0",
     "emoji>=2.0.0",
     "syllapy>=0.7.2",
@@ -23,15 +25,53 @@ dependencies = [
     "setuptools>=69.0.0,<81",  # syllapy imports pkg_resources (removed in setuptools 81)
     "tabulate>=0.9.0",
     "ifstruct",
-    "sympy>=1.12",
-    "pylatexenc>=2.10",
+    # MATH-500 verdicts depend on sympy's simplify and pylatexenc's LaTeX-to-text;
+    # these match liquid_evals' uv.lock, which its math500 task grades with.
+    "sympy==1.14.0",
+    "pylatexenc==2.10",
+    # ASR WER (scoring/asr/NOTICE.md): kaldialign is the Open ASR Leaderboard's
+    # pin (requirements/requirements_jobs.txt); num2words, which its multilingual
+    # normalizer spells numbers out with (FLEURS), it installs unpinned; it is
+    # pinned here at its latest release, which that install resolves to, so that
+    # the FLEURS numbers are reproducible.
+    "kaldialign==0.12.0",
+    "num2words==0.5.14",
+    # The vendored Open ASR normalizers' \p{...} classes are regex's Unicode
+    # tables.
+    "regex==2026.4.4",
+    # ASR samples decode each clip and re-encode it as 16 kHz mono WAV; pinned
+    # with its bundled libsndfile 1.2.2 (scoring/asr/NOTICE.md).
+    "soundfile==0.14.0",
+    # A clip not at 16 kHz mono (MonsoonASR is 44.1 kHz) is resampled by the
+    # dataset builder as datasets.Audio(sampling_rate=16000) does, through
+    # librosa's default soxr_hq (dataset_catalog/_asr_audio.py).
+    "soxr==1.1.0",
+    # `pipette-scores packages` and the server's PIPETTE_SCORES_PACKAGES index reads go through S3 (packages.py).
+    "boto3",
 ]
 
 [tool.uv.sources]
 ifstruct = { path = "../../vendor/ifstruct" }
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.24.0", "httpx>=0.24.0", "ruff>=0.8.0"]
+# Offline VLM dataset builders + verifier only (scripts/build_<eval>_dataset.py
+# → _vlm_build download_tsv/maybe_resize, verify_vlm_datasets.py). Kept OUT of
+# runtime deps so the production scores image (`uv sync --no-dev`) stays lean —
+# the serving/scoring path (_vlm_common, the 7 scorers) never imports these.
+build = [
+    "requests>=2.31.0",
+    "pillow>=10.0",
+    # ASR dataset builders (scripts/build_asr_datasets.py): the languages' ISO 639
+    # names and codes, fixed into each built dataset.
+    "pycountry==26.2.16",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.24.0",
+    "ruff>=0.8.0",
+    "pipette-scores[build]",
+]
 
 [project.scripts]
 pipette-scores = "pipette_scores.cli:main"
@@ -43,16 +83,17 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["pipette_scores"]
 
-# Bundle the pristine upstream IFBench source (vendor/ifbench submodule) into
-# the wheel so the installed package is self-contained and does not depend on
-# the repo layout at runtime. The adapter (scoring/ifbench/upstream.py) finds
-# these files inside site-packages; in editable/source installs it falls back
-# to the submodule path at the repo root.
+# Bundle the vendored IFBench checkers (vendor/ifbench-checkers, at the revision
+# liquid_evals scores with) into the wheel so the installed package is
+# self-contained and does not depend on the repo layout at runtime. The adapter
+# (scoring/ifbench/upstream.py) finds these files inside site-packages; in
+# editable/source installs it falls back to the vendored path at the repo root.
 [tool.hatch.build.targets.wheel.force-include]
-"../../vendor/ifbench/evaluation_lib.py" = "pipette_scores/scoring/ifbench/_upstream/evaluation_lib.py"
-"../../vendor/ifbench/instructions.py" = "pipette_scores/scoring/ifbench/_upstream/instructions.py"
-"../../vendor/ifbench/instructions_registry.py" = "pipette_scores/scoring/ifbench/_upstream/instructions_registry.py"
-"../../vendor/ifbench/instructions_util.py" = "pipette_scores/scoring/ifbench/_upstream/instructions_util.py"
-"../../vendor/ifbench/LICENSE" = "pipette_scores/scoring/ifbench/_upstream/LICENSE"
+"../../vendor/ifbench-checkers/evaluation_lib.py" = "pipette_scores/scoring/ifbench/_upstream/evaluation_lib.py"
+"../../vendor/ifbench-checkers/instructions.py" = "pipette_scores/scoring/ifbench/_upstream/instructions.py"
+"../../vendor/ifbench-checkers/instructions_registry.py" = "pipette_scores/scoring/ifbench/_upstream/instructions_registry.py"
+"../../vendor/ifbench-checkers/instructions_util.py" = "pipette_scores/scoring/ifbench/_upstream/instructions_util.py"
+"../../vendor/ifbench-checkers/LICENSE" = "pipette_scores/scoring/ifbench/_upstream/LICENSE"
+"../../vendor/ifbench-checkers/README.md" = "pipette_scores/scoring/ifbench/_upstream/README.md"
 "../../NOTICE" = "pipette_scores/NOTICE"
 "../../THIRD_PARTY_LICENSES.md" = "pipette_scores/THIRD_PARTY_LICENSES.md"

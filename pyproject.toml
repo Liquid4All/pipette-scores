@@ -14,7 +14,11 @@ target-version = "py312"
 exclude = [
     "packages/pipette-scores/pipette_scores/vendor",
     "packages/pipette-scores/pipette_scores/scoring/math_500/prm800k",
+    # Vendored verbatim from liquid_evals; kept byte-identical to the original.
+    "packages/pipette-scores/pipette_scores/scoring/math_500/liquid_evals_parser.py",
     # Build-time-generated bundled IFBench source (force-included into the wheel).
     "packages/pipette-scores/pipette_scores/scoring/ifbench/_upstream",
+    # Vendored verbatim from the Open ASR Leaderboard (see its NOTICE.md).
+    "packages/pipette-scores/pipette_scores/scoring/asr/open_asr_normalizer",
     "vendor",
 ]
