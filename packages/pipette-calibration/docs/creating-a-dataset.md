@@ -4,16 +4,16 @@ End-to-end workflow for producing a new versioned calibration dataset.
 
 ## 1. Initialize datasets
 
-Download upstream data into the `pipette-scores` dataset catalog. The
-`pipette-calibration create-initial-dataset` command currently supports
-IFStruct; the other current evals are materialized by the build scripts in
-`packages/pipette-scores/scripts/`.
+Write the source datasets into the dataset catalog at
+`<repo>/datasets/<eval>/<dataset>/`. Use the build scripts in
+`packages/pipette-scores/scripts/` for ifbench, gpqa_diamond, and math_500.
+These scripts write a version directory, for example `2026.06.1`.
+
+For IFStruct, use `create-initial-dataset`. It writes the dataset `default`:
 
 ```bash
 uv run pipette-calibration create-initial-dataset --eval ifstruct
 ```
-
-This writes dataset files to `<pipette-scores>/datasets/<eval>/default/`.
 
 ## 2. Generate completions
 
@@ -22,20 +22,22 @@ Run each model on each eval. Locally:
 ```bash
 uv run --group gpu pipette-calibration generate-completions \
     --eval math_500 --model LiquidAI/LFM2-1.2B \
-    --dataset default --output-dir _calibration_results
+    --dataset 2026.06.1 --output-dir _calibration_results
 ```
 
-On a Slurm cluster, use `submit.sh` instead — see [slurm.md](slurm.md).
+On a Slurm cluster, use `pipette-calibration slurm-completions submit`. See
+[slurm.md](slurm.md).
 
-Completions are generated against the `--dataset` (default: `default`). This
-is the source dataset — the full set of samples.
+Set `--dataset` to the source dataset, which is the full set of samples. This
+document calls it `<source>`. The default value is `default`. Only
+`create-initial-dataset` writes a dataset with that name.
 
 ## 3. Verify completions
 
+Run this command once for each eval:
+
 ```bash
-for eval in ifbench ifstruct gpqa_diamond math_500; do
-  pipette-calibration slurm-completions status --eval $eval
-done
+pipette-calibration slurm-completions status --eval <eval> --dataset <source>
 ```
 
 Every model in the frozen registry (`pipette_calibration/slurm/models.py`)
@@ -44,13 +46,14 @@ must be clean across all evals before proceeding. See
 
 ## 4. Create representative subset
 
+Run this command once for each eval:
+
 ```bash
-for eval in ifbench ifstruct gpqa_diamond math_500; do
-  uv run pipette-calibration create-representative-dataset \
-      --eval $eval \
-      --results-path _calibration_results \
-      --dataset 2026.03.2
-done
+uv run pipette-calibration create-representative-dataset \
+    --eval <eval> \
+    --source-dataset <source> \
+    --results-path _calibration_results \
+    --dataset 2026.03.2
 ```
 
 This command scores all completions, builds pass vectors, and selects the
@@ -66,8 +69,7 @@ subset. Scoring and selection details: [calibration process](#5-calibration-proc
 | `--num-samples`       | 200       | Target subset size                     |
 
 `--dataset` is the name of the output (e.g. `2026.03.2`).
-`--source-dataset` is the full dataset that completions were generated against
-(usually `default`).
+`--source-dataset` is the full dataset that completions were generated against.
 
 ### 4.2 Naming convention
 
@@ -82,8 +84,8 @@ Steps 4's `create-representative-dataset` runs internally:
 
 Each model's completions are scored against ground truth using per-eval
 scorers from [pipette-scores](https://github.com/Liquid4All/pipette-scores).
-Scoring runs in parallel (one subprocess per model), producing an S x M
-boolean pass/fail matrix.
+Scoring runs in parallel subprocesses (at most one for each CPU) and produces
+an S x M boolean pass/fail matrix.
 
 | Eval      | Method                                           |
 |-----------|--------------------------------------------------|
@@ -96,7 +98,9 @@ boolean pass/fail matrix.
 
 Models are automatically excluded if:
 
-- Scoring subprocess crashes (OOM, dependency error).
+- Scoring raises an error for the model.
+- A scoring subprocess is killed (for example, by OOM). The pool then stops,
+  and all models that are not yet scored are excluded.
 - Completions are missing sample IDs (incomplete run).
 - Model scores 0% (no discriminative signal).
 
@@ -110,27 +114,27 @@ details.
 
 ## 6. Output
 
-Each eval produces files in `<pipette-scores>/datasets/<eval>/<dataset>/`:
+Each eval produces files in `<repo>/datasets/<eval>/<dataset>/`:
 
-- Primary split file (`train.parquet`, `test.parquet`, or `test.jsonl`) — the selected samples.
-- Other splits copied unchanged from the source dataset.
+- Split file (`train.parquet`, `test.parquet`, or `test.jsonl`) — the selected samples.
 - `metadata.json` — models used, models skipped (with reasons).
 
 ## 7. What to check
 
 Review the log output for each eval:
 
-- **Max deviation** — should be under 1%. Typical: 0.2-0.5%.
+- **Max deviation** — the log shows the deviation for each model and the maximum. Check it.
 - **Skipped models** — check `metadata.json` for the full list and reasons.
 - **Sample count** — should match `--num-samples` (200).
 
-## 8. Updating pipette-scores
+## 8. Committing the output
 
-The output datasets land in the `pipette-scores` package tree. After generating:
+The output datasets are in `<repo>/datasets/`. After you generate them:
 
-1. Review the new parquet files and metadata.
-2. Commit and push in `pipette-scores`.
-3. Tag if this is a release dataset.
+1. Review the new dataset files and metadata.
+2. Commit only the ifstruct output. The repository does not redistribute the
+   gpqa_diamond, math_500, and ifbench data, and `.gitignore` excludes them.
+3. Tag the commit if this is a release dataset.
 
 ## 9. Re-running with different models
 

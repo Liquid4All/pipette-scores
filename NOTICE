@@ -4,16 +4,48 @@ This repository bundles and adapts third-party code. Full license texts are in
 THIRD_PARTY_LICENSES.md.
 
 Vendored verbatim
+- vendor/ifbench — the upstream IFBench repository, from allenai/IFBench
+  (Apache-2.0), vendored as a git submodule (LICENSE at vendor/ifbench/LICENSE).
+  Only its test set is used.
+- packages/pipette-scores/pipette_scores/scoring/asr/open_asr_normalizer/ — the Open
+  ASR Leaderboard's English text normalizer (normalizer.py, english_abbreviations.py),
+  from huggingface/open_asr_leaderboard @ 67e8bd6acea240819ad67080f6f31e15d4a90da5
+  (Apache-2.0, (c) 2022 The OpenAI team and The HuggingFace Team; mostly copied, per
+  its header, from openai/whisper, MIT, (c) 2022 OpenAI), and its multilingual
+  normalizer and compound-pair alignment (multilingual.py: unchanged excerpts of
+  normalizer/data_utils.py and normalizer/eval_utils.py @
+  62a457c5c32d0de4df77e9470308aae7d45b055f, Apache-2.0).
+  Provenance and hashes of the ASR files: scoring/asr/NOTICE.md.
+
+Vendored with modifications
 - packages/pipette-scores/pipette_scores/scoring/math_500/prm800k/grading/ — the PRM800K
-  mathematical equivalence grader, from openai/prm800k (MIT, (c) 2023 OpenAI). Its
+  mathematical equivalence grader (grader.py, math_normalize.py), from openai/prm800k
+  (MIT, (c) 2023 OpenAI). The changes are a relative import and raw-string regex
+  literals; the behavior is the same. Its __init__.py is Liquid AI's. Its
   math_normalize.py is, per its header, largely copied from Hendrycks' MATH
   `math_equivalence` (hendrycks/math, MIT, (c) 2021 Dan Hendrycks).
-- vendor/ifbench — the upstream IFBench scoring source, from allenai/IFBench
-  (Apache-2.0), vendored as a git submodule (LICENSE at vendor/ifbench/LICENSE).
-  At build time it is bundled into the wheel under
+- vendor/ifbench-checkers — the IFBench scoring source (evaluation_lib.py,
+  instructions.py, instructions_registry.py, instructions_util.py), from
+  allenai/IFBench @ 1a902f9 (Apache-2.0, (c) Allen Institute for AI and The Google
+  Research Authors). Liquid AI changed instructions.py, instructions_util.py and
+  evaluation_lib.py; each carries a notice, and the changes are listed in
+  vendor/ifbench-checkers/README.md.
+  At build time these files are bundled into the wheel under
   pipette_scores/scoring/ifbench/_upstream/ (including the LICENSE).
 
 Adapted
+- packages/pipette-scores/pipette_scores/dataset_catalog/_asr_audio.py —
+  `resample_16k_mono` follows the decoding sequence of huggingface/datasets
+  2.19.0's `Audio.decode_example` (Apache-2.0, (c) The HuggingFace Datasets
+  Authors) and librosa's `to_mono`, `resample` (res_type "soxr_hq") and
+  `util.fix_length` (librosa/librosa, ISC, (c) 2013--2026 librosa development team).
+- packages/pipette-scores/pipette_scores/scoring/vlm_upstream/, scoring/profile_answers.py,
+  dataset_catalog/prompt_profiles.py, dataset_catalog/_vlm_build.py and _vlm_common.py, and
+  the seven VLM dataset builders in packages/pipette-scores/scripts/ — answer extraction and
+  metrics, a model wrapper's answer extraction, model-specific prompts and the datasets'
+  default prompts and pinned sources, from open-compass/VLMEvalKit @ 8eca8e5 (Apache-2.0,
+  (c) 2023 VLMEvalKit Authors), modified by Liquid AI (deterministic only: no LLM judge, no
+  random choice). Each file names what it ports; THIRD_PARTY_LICENSES.md lists them.
 - packages/pipette-scores/pipette_scores/scoring/math_500/math_generic.py — the robust-boxed
   numeric normalization (`normalize_numeric_answer`) is copied from groq/openbench
   `robust_boxed.py` (MIT, (c) 2025 Groq, Inc.).
@@ -30,6 +62,13 @@ Liquid AI original work — vendored from a separate Liquid repo
 - packages/pipette-scores/pipette_scores/scoring/ifstruct.py and the vendored
   `vendor/ifstruct` validator are Liquid AI's own (Liquid4All/ifstruct); they carry
   no third-party license and are covered by this repository's license.
+- packages/pipette-scores/pipette_scores/scoring/math_500/liquid_evals_parser.py holds
+  unchanged excerpts of Liquid AI's Liquid4All/liquid_evals (liquid_evals/parser.py
+  @ d5534cf). Its sympy grader derives from openai/prm800k (MIT, (c) 2023 OpenAI)
+  and its mathd normalization from hendrycks/math (MIT, (c) 2021 Dan Hendrycks);
+  both licenses are in THIRD_PARTY_LICENSES.md.
+- packages/pipette-scores/pipette_scores/scoring/completion_text.py
+  (`remove_thinking_tags`) is vendored from the same liquid_evals/parser.py.
 
 This repository's original work is licensed under the Apache License, Version 2.0.
 See LICENSE for the full license text.

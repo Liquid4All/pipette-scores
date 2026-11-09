@@ -1,0 +1,274 @@
+{
+ "note": "Answers of the public reference implementations on the synthetic corpus of tests/asr_public_reference.py; regenerate with `python tests/asr_public_reference.py --write-fixture`.",
+ "corpus_sha256": "4ed9ae14192ac2194f3aa9681f65d3dc2a386b9335931545b741e5786655dab9",
+ "open_asr_english": {
+  "kept": 1116,
+  "units": 1116,
+  "totals": {
+   "ins": 1708,
+   "del": 3674,
+   "sub": 520,
+   "total": 5902,
+   "ref_len": 21530,
+   "err_rate": 0.27412912215513235
+  },
+  "wer": 27.41
+ },
+ "open_asr_calls": {
+  "kept": 28,
+  "units": 6,
+  "totals": {
+   "ins": 37,
+   "del": 79,
+   "sub": 6,
+   "total": 122,
+   "ref_len": 668,
+   "err_rate": 0.18263473053892215
+  },
+  "wer": 18.26
+ },
+ "fleurs": {
+  "asr_fleurs_en_us": {
+   "totals": {
+    "ins": 427,
+    "del": 1228,
+    "sub": 183,
+    "total": 1838,
+    "ref_len": 8158,
+    "err_rate": 0.22530031870556508
+   },
+   "references_sha256": "2bcbeaed6769641dc888746a47aac1f220eeaa6c122419024f2ecc5b29c15649",
+   "hypotheses_sha256": "3f70739372b44e9658dfebca9db37283e514a4e14a660cd5aecbf102b434ccc3"
+  },
+  "asr_fleurs_es_419": {
+   "totals": {
+    "ins": 130,
+    "del": 327,
+    "sub": 19,
+    "total": 476,
+    "ref_len": 1668,
+    "err_rate": 0.2853717026378897
+   },
+   "references_sha256": "0c804f87e924c52ee1fd48b3b475a65b722749e0abac82c57974715fce661e97",
+   "hypotheses_sha256": "52cdaa81abd273ad14dd3d0ef8bc83c8976a0ea47c5e7a883cbcc637293088e9"
+  },
+  "asr_fleurs_pt_br": {
+   "totals": {
+    "ins": 142,
+    "del": 417,
+    "sub": 37,
+    "total": 596,
+    "ref_len": 2248,
+    "err_rate": 0.26512455516014233
+   },
+   "references_sha256": "c29a08def9eb45cf6d460aba54cc0a3d393415c13ad620685138c6c4b0cb0e80",
+   "hypotheses_sha256": "9dd0e3200af83bd6d15749f2789d6afc508c5ee352cdc41039d19968d03722e2"
+  },
+  "asr_fleurs_de_de": {
+   "totals": {
+    "ins": 101,
+    "del": 277,
+    "sub": 9,
+    "total": 387,
+    "ref_len": 1432,
+    "err_rate": 0.2702513966480447
+   },
+   "references_sha256": "4dc7274cb4ab0fbc25929717f76b2788123f1a6987ea7f55ccfaaf4ea4549855",
+   "hypotheses_sha256": "2a3de7e3fa5be82d81bbffbae0c1d0a8ee796eba74f1cf86efbfd98dcca8cf2b"
+  },
+  "asr_fleurs_fr_fr": {
+   "totals": {
+    "ins": 216,
+    "del": 376,
+    "sub": 64,
+    "total": 656,
+    "ref_len": 1975,
+    "err_rate": 0.3321518987341772
+   },
+   "references_sha256": "286931fb35d17925889d1a2bd65f71183215eaac619c786aecede829823acac2",
+   "hypotheses_sha256": "befde7102c0834519d26c0963df363e013cb50d7a7c249db44aa35d9290f2549"
+  },
+  "asr_fleurs_it_it": {
+   "totals": {
+    "ins": 150,
+    "del": 83,
+    "sub": 17,
+    "total": 250,
+    "ref_len": 1378,
+    "err_rate": 0.18142235123367198
+   },
+   "references_sha256": "e3f65ca8a9d9e0a4ae08b7691ace144b5ffa6bec75871337899a432e7a0425b4",
+   "hypotheses_sha256": "779824def44ffcc57d7f5bf6542bd83916b1d5fb1016a60ab2c7c2c4e6a8afa4"
+  },
+  "asr_fleurs_nl_nl": {
+   "totals": {
+    "ins": 167,
+    "del": 148,
+    "sub": 29,
+    "total": 344,
+    "ref_len": 1556,
+    "err_rate": 0.2210796915167095
+   },
+   "references_sha256": "e89dd142482956e0b33c52e627708fd56895fd2b7be8c2016f0c33a4b39e21d3",
+   "hypotheses_sha256": "03ac5373128321a26b2a9f464216479abd13d998a5939a31e450e0acfd11c9e2"
+  }
+ },
+ "audio": {
+  "synthetic:0": {
+   "dtype": "float64",
+   "shape": [
+    16000
+   ],
+   "projections": [
+    9.31597900390625,
+    38.38427734375,
+    3.419921875,
+    -31.8055419921875
+   ]
+  },
+  "synthetic:1": {
+   "dtype": "float64",
+   "shape": [
+    11200
+   ],
+   "projections": [
+    10.7384033203125,
+    18.618316650390625,
+    10.40509033203125,
+    2.439971923828125
+   ]
+  },
+  "synthetic:2": {
+   "dtype": "float64",
+   "shape": [
+    32000
+   ],
+   "projections": [
+    42.33514472353272,
+    -28.475582922052126,
+    -23.47223713324638,
+    -4.708073227840941
+   ]
+  },
+  "synthetic:3": {
+   "dtype": "float64",
+   "shape": [
+    8000
+   ],
+   "projections": [
+    6.849297082284465,
+    0.26745599252171814,
+    14.89071828336455,
+    14.703600517008454
+   ]
+  },
+  "synthetic:4": {
+   "dtype": "float64",
+   "shape": [
+    8001
+   ],
+   "projections": [
+    7.431317881273571,
+    3.724427258304786,
+    20.48470800247742,
+    13.133156515366863
+   ]
+  },
+  "synthetic:5": {
+   "dtype": "float64",
+   "shape": [
+    20800
+   ],
+   "projections": [
+    23.709535166337446,
+    8.775410203852516,
+    -7.841983656333468,
+    -2.9995739548976417
+   ]
+  },
+  "synthetic:6": {
+   "dtype": "float64",
+   "shape": [
+    14400
+   ],
+   "projections": [
+    6.0521195631008595,
+    29.99399705673568,
+    -1.5129033240955323,
+    -5.974555250955746
+   ]
+  },
+  "synthetic:7": {
+   "dtype": "float64",
+   "shape": [
+    6400
+   ],
+   "projections": [
+    10.723752788384445,
+    -0.7437152013881132,
+    12.310199774918146,
+    0.36512000404763967
+   ]
+  },
+  "synthetic:8": {
+   "dtype": "float64",
+   "shape": [
+    17600
+   ],
+   "projections": [
+    27.201634862663923,
+    25.561785096448148,
+    -2.4057043149659876,
+    -22.83474291258608
+   ]
+  },
+  "synthetic:9": {
+   "dtype": "float64",
+   "shape": [
+    9600
+   ],
+   "projections": [
+    14.287457935512066,
+    16.104517214000225,
+    28.006347393617034,
+    -9.179147629067302
+   ]
+  },
+  "synthetic:10": {
+   "dtype": "float64",
+   "shape": [
+    5280
+   ],
+   "projections": [
+    5.262140964157879,
+    -2.915385398082435,
+    0.893868244253099,
+    -22.660271869972348
+   ]
+  },
+  "synthetic:11": {
+   "dtype": "float64",
+   "shape": [
+    27200
+   ],
+   "projections": [
+    43.310360291274264,
+    -6.386169803561643,
+    -11.929985500639305,
+    -28.81510943523608
+   ]
+  },
+  "synthetic:12": {
+   "dtype": "float64",
+   "shape": [
+    12800
+   ],
+   "projections": [
+    12.030276922741905,
+    18.970606460003182,
+    6.993227287428454,
+    -6.154400517931208
+   ]
+  }
+ }
+}

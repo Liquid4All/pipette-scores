@@ -3,7 +3,7 @@ from collections import defaultdict
 from typing import Any
 
 from pipette_scores.repeats import logical_id
-from pipette_scores.scoring.completion_text import remove_thinking_tags
+from pipette_scores.scoring.completion_text import grading_text, remove_thinking_tags
 
 from pipette_scores.scoring.ifbench.upstream import (
     InputExample,
@@ -15,9 +15,14 @@ from pipette_scores.types import IFBenchSample, SampleCompletion, SampleScore
 
 
 def score(
-    completions: list[SampleCompletion], samples: list[IFBenchSample]
+    completions: list[SampleCompletion], samples: list[IFBenchSample], *, enable_thinking: bool | None = None
 ) -> tuple[list[SampleScore], dict[str, Any]]:
-    """Score completions with upstream IFBench's strict and loose checkers.
+    """Score completions with IFBench's strict and loose checkers.
+
+    The checkers are allenai/IFBench at the revision liquid_evals scores its
+    ``ifbench_aa`` task with (``vendor/ifbench-checkers``), so a completion gets
+    the same verdict here as there. The only exceptions are the few inputs on
+    which liquid_evals has no stable verdict; that directory's README lists them.
 
     Mirrors upstream ``run_eval.py``: every response is scored under both
     ``test_instruction_following_strict`` and ``test_instruction_following_loose``.
@@ -33,9 +38,12 @@ def score(
     accuracy per full instruction id (``strict/<category>:<name>``) — each for
     both the strict and loose passes.
 
-    Reasoning chains are removed first via ``remove_thinking_tags``. Upstream
-    strips these during generation; because this scorer ingests raw completions,
-    it does the equivalent cleanup here before applying the unmodified checkers.
+    Reasoning chains are removed first via ``remove_thinking_tags``, the same
+    function liquid_evals applies to each response before its checkers run.
+    ``grading_text`` runs before it, rewriting model-specific reasoning markup.
+    The context counts completions cut short inside their reasoning as
+    ``ifbench_blanked_truncated``; ``ifbench_pass_at_1_blanked`` is
+    ``ifbench_pass_at_1`` with those counted wrong.
 
     When the dataset is run with repeats (``#k`` salted ids), the context also
     carries ``ifbench_pass_at_1`` — the loose prompt-level pass rate aggregated
@@ -56,10 +64,13 @@ def score(
     strict_iid_passed: dict[str, int] = defaultdict(int)
     loose_iid_passed: dict[str, int] = defaultdict(int)
     per_iid_total: dict[str, int] = defaultdict(int)
+    blanked = 0
+    blanked_correct = 0
 
     for c in completions:
         sample = by_id[c.id]
-        text = remove_thinking_tags(c.completion)
+        text, cut = grading_text(c, enable_thinking)
+        text = remove_thinking_tags(text)
 
         inp = InputExample(
             key=sample.key,
@@ -73,6 +84,8 @@ def score(
         loose_out = test_instruction_following_loose(inp, {sample.prompt: text})
 
         scores.append(SampleScore(id=c.id, is_correct=loose_out.follow_all_instructions))
+        blanked += cut
+        blanked_correct += cut and loose_out.follow_all_instructions
 
         if strict_out.follow_all_instructions:
             strict_prompt_correct += 1
@@ -121,6 +134,8 @@ def score(
     context["ifbench_pass_at_1_per_sample"] = {
         lid: per_sample_correct[lid] / per_sample_total[lid] for lid in sorted(per_sample_total)
     }
+    context["ifbench_blanked_truncated"] = blanked
+    context["ifbench_pass_at_1_blanked"] = (loose_prompt_correct - blanked_correct) / n_samples if n_samples else 0.0
     # tier0 derives from tier1: each instruction id belongs to exactly one
     # category (the prefix before ":"), so category totals are just the sum
     # over their members. Keys have no ":", e.g. "strict/count".

@@ -27,3 +27,4 @@ pipette-calibration slurm-completions status --eval <eval>    # verify a finishe
 - [Slurm](docs/slurm.md) — running completions on a cluster, troubleshooting
 - [Verification](docs/verification.md) — checking completions for issues
 - [Representative selection](docs/representative-selection.md) — subset selection algorithm
+- [GGUF quants](docs/gguf-quants.md) — GGUF repo and file picks for the model registry

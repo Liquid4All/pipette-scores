@@ -6,44 +6,45 @@
                           pipette-calibration
 ┌─────────────────────────────────────────────────────────────────────┐
 │                                                                     │
-│  ┌──────────────┐    ┌──────────────────┐    ┌──────────────────┐  │
-│  │ 1. Download   │    │ 2. Generate       │    │ 3. Verify        │  │
-│  │    datasets   │───>│    completions    │───>│    completions   │  │
-│  │              │    │                  │    │                  │  │
-│  │ HuggingFace  │    │ vLLM on GPU      │    │ check IDs, dups, │  │
-│  │ -> parquet   │    │ (Slurm cluster)  │    │ empty responses  │  │
-│  └──────────────┘    └──────────────────┘    └────────┬─────────┘  │
-│                                                        │            │
-│                      ┌──────────────────┐              │            │
-│                      │ 4. Score          │<─────────────┘            │
-│                      │    completions    │                           │
-│                      │                  │  pipette-scores        │
+│  ┌──────────────┐    ┌──────────────────┐    ┌──────────────────┐   │
+│  │ 1. Build     │    │ 2. Generate      │    │ 3. Verify        │   │
+│  │    datasets  │───>│    completions   │───>│    completions   │   │
+│  │              │    │                  │    │                  │   │
+│  │ upstream ->  │    │ vLLM on GPU      │    │ check IDs, dups, │   │
+│  │ datasets/    │    │ (Slurm cluster)  │    │ empty responses  │   │
+│  └──────────────┘    └──────────────────┘    └────────┬─────────┘   │
+│                                                       │             │
+│                      ┌──────────────────┐             │             │
+│                      │ 4. Score         │<────────────┘             │
+│                      │    completions   │                           │
+│                      │                  │  pipette-scores           │
 │                      │ per-model pass/  │  (scoring library)        │
 │                      │ fail vectors     │                           │
 │                      └────────┬─────────┘                           │
 │                               │                                     │
 │                      ┌────────v─────────┐                           │
-│                      │ 5. Select         │                           │
-│                      │    representative │                           │
-│                      │    subset         │                           │
+│                      │ 5. Select        │                           │
+│                      │    representative│                           │
+│                      │    subset        │                           │
 │                      │                  │                           │
 │                      │ greedy + local   │                           │
-│                      │ search / SA      │                           │
+│                      │ search           │                           │
 │                      └────────┬─────────┘                           │
 │                               │                                     │
 └───────────────────────────────┼─────────────────────────────────────┘
                                 │
                                 v
-                  pipette-scores/datasets/
-                  <eval>/<dataset>/test.parquet
+                  <repo>/datasets/
+                  <eval>/<dataset>/<split file>
 ```
 
 ## 2. Steps
 
-### 2.1 Download datasets
+### 2.1 Build datasets
 
-`create-initial-dataset` fetches upstream data from HuggingFace and writes
-parquet files into the `pipette-scores` dataset catalog. Run once per eval.
+The build scripts in `packages/pipette-scores/scripts/` write the source
+datasets into the dataset catalog. `create-initial-dataset` builds IFStruct
+from the vendored IFStruct data.
 
 ### 2.2 Generate completions
 
@@ -55,8 +56,8 @@ dataset. See [slurm.md](slurm.md).
 ### 2.3 Verify completions
 
 `verify-completions` and `slurm-completions status` compare completion IDs
-against the dataset, check for duplicates, and flag empty responses. This
-gates whether completions are ready for scoring. See [verification.md](verification.md).
+against the dataset and check for duplicates. The two commands use different
+pass rules. See [verification.md](verification.md).
 
 ### 2.4 Score completions
 
@@ -68,34 +69,40 @@ runs in parallel subprocesses. See [creating-a-dataset.md §5](creating-a-datase
 
 The scored pass vectors (S samples x M models) are fed into the selection
 algorithm. The goal: pick N samples (default 200) where each model's subset
-accuracy matches its full-set accuracy within ~0.5%. Output is a new parquet
-dataset in `pipette-scores`. See [representative-selection.md](representative-selection.md).
+accuracy is close to its full-set accuracy. Output is a new dataset in the
+dataset catalog. See [representative-selection.md](representative-selection.md).
 
 ## 3. Data flow
 
 ```
-HuggingFace datasets
+upstream data
         │
         v
-datasets/<eval>/<source>/test.parquet          # full dataset (source="default")
+datasets/<eval>/<source>/<split file>           # full dataset
         │
         v (vLLM inference, per model)
-_calibration_results/<eval>/<model>/<source>/
-        completions.shard*.jsonl                # raw completions
+<results>/<eval>/<org--model>/<source>/
+        completions.shard*.jsonl                # raw completions (completions.jsonl if unsharded)
         │
         v (scoring + selection)
-datasets/<eval>/<dataset>/test.parquet          # representative subset
+datasets/<eval>/<dataset>/<split file>          # representative subset
                           metadata.json         # models used, skipped
 ```
 
-## 4. Repo boundaries
+`datasets/` is at the repository root, or at `$PIPETTE_SCORES_DATA_DIR` if
+that variable is set. The split file is `test.jsonl` for ifstruct,
+`train.parquet` for ifbench, and `test.parquet` for the other evals.
 
-| Concern               | Repo                    |
+## 4. Package boundaries
+
+Both packages are members of one uv workspace.
+
+| Concern               | Package                 |
 |-----------------------|-------------------------|
-| Dataset catalog       | pipette-scores       |
-| Scoring logic         | pipette-scores       |
-| Prompt templates      | pipette-scores       |
-| Completion generation | pipette-calibration  |
-| Verification          | pipette-calibration  |
-| Subset selection      | pipette-calibration  |
-| Slurm scripts         | pipette-calibration  |
+| Dataset catalog       | pipette-scores          |
+| Scoring logic         | pipette-scores          |
+| Prompt templates      | pipette-scores          |
+| Completion generation | pipette-calibration     |
+| Verification          | pipette-calibration     |
+| Subset selection      | pipette-calibration     |
+| Slurm scripts         | pipette-calibration     |

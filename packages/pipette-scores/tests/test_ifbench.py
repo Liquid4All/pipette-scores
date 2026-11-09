@@ -1,4 +1,5 @@
 import math
+import sys
 
 import pytest
 
@@ -155,6 +156,8 @@ def test_score_context_keys():
         "ifbench_pass_at_1",
         "ifbench_pass_at_1_stderr",
         "ifbench_pass_at_1_per_sample",
+        "ifbench_blanked_truncated",
+        "ifbench_pass_at_1_blanked",
         "strict/count",  # tier0: category prefix
         "loose/count",
         "strict/count:keywords_multiple",  # tier1: full instruction id
@@ -246,3 +249,131 @@ def test_pass_at_1_repeats_one_transparent():
     _, context = score(completions, samples)
     assert context["ifbench_pass_at_1"] == 1.0
     assert context["ifbench_pass_at_1_per_sample"] == {"1": 1.0}
+
+
+# --- behaviour of the checkers at the liquid_evals revision (vendor/ifbench-checkers) ---
+
+
+def test_curly_quotes_normalized_like_liquid_evals():
+    # liquid_evals' checker maps curly quotes to '"' before looking for two
+    # quoted phrases in a row; the newer allenai checker lost that step.
+    sample = _sample("q", ["format:quote_unquote"], "Explain every quote.")
+    completions = [SampleCompletion(id="q", completion="He said “hello”“world” and left.")]
+    scores, _ = score(completions, [sample])
+    assert scores[0].is_correct is False
+
+
+def test_repeat_span_n_start_zero_is_deterministic():
+    # Upstream treats n_start=0 as unset and picks a random start on every call;
+    # the vendored copy uses 0 as given, so the verdict never changes.
+    words = " ".join(f"w{i}" for i in range(20))
+    sample = _sample(
+        "r", ["repeat:repeat_span"], "Repeat a span.", kwargs=[{"prompt_to_repeat": words, "n_start": 0, "n_end": 3}]
+    )
+    completions = [SampleCompletion(id="r", completion="w0 w1 w2")]
+    verdicts = {score(completions, [sample])[0][0].is_correct for _ in range(20)}
+    assert verdicts == {True}
+
+
+@pytest.mark.parametrize(
+    "instruction_id, kwargs, completion",
+    [
+        ("ratio:stop_words", {"percentage": 20}, "..."),  # ZeroDivisionError upstream
+        ("ratio:stop_words", {"percentage": 20}, "😀😀"),
+        ("words:last_first", {}, "Wow!! Wow is great."),  # IndexError upstream
+        # ZeroDivisionError under 3 characters; liquid_evals' copy returns False.
+        ("ratio:overlap", {"reference_text": "abcdefgh", "percentage": 50}, "ab"),
+    ],
+)
+def test_checker_exception_scores_as_not_followed(instruction_id, kwargs, completion):
+    sample = _sample("x", [instruction_id], "Follow the constraint.", kwargs=[kwargs])
+    scores, context = score([SampleCompletion(id="x", completion=completion)], [sample])
+    assert scores[0].is_correct is False
+    assert context["strict_instruction_accuracy"] == 0.0
+
+
+@pytest.mark.parametrize(
+    "instruction_id, kwargs, completion",
+    [
+        # The full text raises; dropping the first line leaves a passing variant.
+        ("words:last_first", {}, "Wow!!\nWow is great. Great job."),
+        ("ratio:overlap", {"reference_text": "the quick brown fox", "percentage": 100}, "the quick brown fox\nab"),
+    ],
+)
+def test_loose_tries_other_variants_after_a_check_raises(instruction_id, kwargs, completion):
+    sample = _sample("x", [instruction_id], "Follow the constraint.", kwargs=[kwargs])
+    scores, context = score([SampleCompletion(id="x", completion=completion)], [sample])
+    assert scores[0].is_correct is True
+    assert context["strict_prompt_accuracy"] == 0.0
+
+
+def _upstream_module(name):
+    return sys.modules[f"pipette_scores.scoring.ifbench._upstream.{name}"]
+
+
+def test_missing_nltk_data_raises_instead_of_failing_the_check(monkeypatch):
+    # nltk reports missing data as a bare LookupError; scoring it as "not
+    # followed" would silently lower the score, so it must propagate.
+    checker = _upstream_module("instructions_registry").INSTRUCTION_DICT["ratio:stop_words"]
+
+    def missing(self, value):
+        raise LookupError("Resource stopwords not found.")
+
+    monkeypatch.setattr(checker, "check_following", missing)
+    sample = _sample("x", ["ratio:stop_words"], "Few stop words.", kwargs=[{"percentage": 50}])
+    with pytest.raises(LookupError):
+        score([SampleCompletion(id="x", completion="Cats chase mice.")], [sample])
+
+
+def test_nltk_resource_that_cannot_be_downloaded_fails_import(monkeypatch):
+    util = _upstream_module("instructions_util")
+
+    def not_found(path):
+        raise LookupError(path)
+
+    monkeypatch.setattr(util.nltk.data, "find", not_found)
+    monkeypatch.setattr(util.nltk, "download", lambda *a, **k: False)
+    with pytest.raises(RuntimeError, match="could not be downloaded"):
+        util.download_nltk_resources()
+
+
+def test_nltk_tokenizer_matches_pinned_version():
+    # Title case goes through nltk.word_tokenize, which splits dashes into their
+    # own tokens from nltk 3.9.4 (the version that the internal liquid_evals
+    # environments lock). Before 3.9.4, "Hello—world" is one title-case token.
+    sample = _sample("t", ["format:title_case"], "Write in title case.")
+    passing, _ = score([SampleCompletion(id="t", completion="Hello World")], [sample])
+    dashed, _ = score([SampleCompletion(id="t", completion="Hello—world")], [sample])
+    assert passing[0].is_correct is True
+    assert dashed[0].is_correct is False
+
+
+@pytest.mark.parametrize(
+    "completion",
+    [
+        # Cohere North: the reasoning names the keywords too, which would break the counts.
+        f"One banana, two apple, three cherry.<|END_THINKING|><|START_TEXT|>{_PASS}<|END_TEXT|>",
+        # Gemma 4 on llama.cpp.
+        f"<|channel>thought\nOne banana, two apple.<channel|>{_PASS}",
+    ],
+)
+def test_reasoning_markup_stripped(completion):
+    samples = [_sample("1", ["count:keywords_multiple"], _PROMPT, kwargs=[_KW])]
+    scores, _ = score([SampleCompletion(id="1", completion=completion)], samples)
+    assert scores[0].is_correct is True
+
+
+@pytest.mark.parametrize("stop_reason", ["truncated", "doom_loop"])
+@pytest.mark.parametrize("enable_thinking, blanked", [(True, 1), (False, 0), (None, 0)])
+def test_cut_reasoning_is_graded_raw_and_counted(stop_reason, enable_thinking, blanked):
+    # The prompt opened the reasoning and generation was cut after a draft:
+    # graded whole, as liquid_evals grades it.
+    completions = [SampleCompletion(id="1", completion=f"Draft: {_PASS}", stop_reason=stop_reason)]
+    samples = [_sample("1", ["count:keywords_multiple"], _PROMPT, kwargs=[_KW])]
+    scores, ctx = score(completions, samples, enable_thinking=enable_thinking)
+    assert scores[0].is_correct is True
+    assert ctx["ifbench_pass_at_1"] == 1.0
+    assert ctx["loose_prompt_accuracy"] == 1.0
+    # The strict view counts it wrong.
+    assert ctx["ifbench_blanked_truncated"] == blanked
+    assert ctx["ifbench_pass_at_1_blanked"] == (0.0 if blanked else 1.0)

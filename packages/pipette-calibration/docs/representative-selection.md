@@ -40,21 +40,21 @@ full-dataset size, capped by available samples and adjusted to sum to N.
 **Greedy forward selection.** Within each cell, repeatedly pick the candidate
 that minimises max deviation from full-set model accuracies.
 
-**Local search.** Iteratively try same-cell swaps between selected and
-unselected samples. Accept the first swap that reduces max deviation; repeat
-until no improving swap exists.
+**Local search.** For each selected sample, find the unselected sample in the
+same cell that gives the lowest max deviation. Swap them if the deviation
+decreases. Stop when a round makes no swap, or after 20 rounds.
 
 ## 5. Orchestration
 
 `create_representative_dataset()`:
 
 1. Discover model result dirs under `results_path/eval_id/*/source_dataset/`.
-2. Score all models in parallel (`ProcessPoolExecutor`, one subprocess per model).
+2. Score all models in parallel (`ProcessPoolExecutor`, at most one subprocess for each CPU).
    Models with incomplete results or 0% accuracy are excluded.
 3. Build pass vectors (S x M boolean matrix).
 4. Run selection.
-5. Save selected rows as a new parquet dataset. Non-primary splits copied unchanged.
-   Metadata JSON written alongside.
+5. Save the selected rows as a new dataset in the source dataset's file format.
+   Write `metadata.json` in the same directory.
 
 ## 6. Source
 

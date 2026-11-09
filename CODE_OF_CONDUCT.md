@@ -8,4 +8,4 @@ Assume good intent, keep technical disagreements focused on the work, and help m
 
 Project maintainers may moderate issues, pull requests, discussions, or other project spaces to uphold these expectations.
 
-To report conduct concerns, contact the project maintainers privately.
+To report conduct concerns, contact the project maintainers privately. The maintainers are the accounts listed in [`.github/CODEOWNERS`](.github/CODEOWNERS).
