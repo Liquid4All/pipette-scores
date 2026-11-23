@@ -7,14 +7,12 @@ is no parse step to drift.
 
 from dataclasses import dataclass
 
-from pipette_scores.types import EvalId
-
 
 @dataclass(frozen=True)
 class ModelSpec:
     hf_id: str  # HuggingFace id (org/repo)
     mem: str  # sbatch --mem (host RAM), e.g. "16G"
-    base_shards: int  # array-task count for the default dataset (see effective_shards)
+    base_shards: int  # array-task count for a full dataset (see effective_shards)
 
 
 MODELS: tuple[ModelSpec, ...] = (
@@ -77,12 +75,16 @@ MODELS: tuple[ModelSpec, ...] = (
 )
 
 
-def effective_shards(spec: ModelSpec, eval_id: EvalId, dataset: str) -> int:
-    """Shard count for a (model, eval, dataset).
+MAX_UNSHARDED_SAMPLES = 500
 
-    Non-default datasets are representative subsets (~200 samples) — no need
-    to shard; collapse to 1 so sbatch doesn't fan out uselessly.
+
+def effective_shards(spec: ModelSpec, n_samples: int) -> int:
+    """Shard count for one model on a dataset of ``n_samples`` samples.
+
+    A dataset of at most MAX_UNSHARDED_SAMPLES samples runs as one job, so
+    sbatch does not fan a small subset out over many model loads. A larger
+    dataset runs as ``spec.base_shards`` array tasks.
     """
-    if dataset != "default":
+    if n_samples <= MAX_UNSHARDED_SAMPLES:
         return 1
     return spec.base_shards

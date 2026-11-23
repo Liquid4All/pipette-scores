@@ -79,13 +79,26 @@ _REASONING_CLOSE = re.compile(r"(?i:</think>|\[/THINK\])|assistant(?:<\|channel\
 _ORPHAN_CLOSES = (re.compile(r"</think>", re.IGNORECASE), re.compile(r"\[/THINK\]", re.IGNORECASE))
 
 # Wrappers around the answer that are chat-format markup, not answer text:
-# ERNIE-4.5's <response> (vLLM's ernie45 parser leaves it in the content) and
-# Cohere North's <|START_TEXT|>. Each pair is (opener at a section start,
-# closer at the end of the completion).
+# ERNIE-4.5's <response> (vLLM's ernie45 parser leaves it in the content),
+# Cohere North's <|START_TEXT|> and Inkling 2's <|content_text|>. Each pair is
+# (opener at a section start, closer at the end of the completion).
 _ANSWER_WRAPPERS = tuple(
     (re.compile(r"\s*(" + re.escape(opener) + ")"), re.compile(re.escape(closer) + r"\s*\Z"))
-    for opener, closer in (("<response>", "</response>"), ("<|START_TEXT|>", "<|END_TEXT|>"))
+    for opener, closer in (
+        ("<response>", "</response>"),
+        ("<|START_TEXT|>", "<|END_TEXT|>"),
+        ("<|content_text|>", "<|end_message|>"),
+    )
 )
+
+# Inkling 2 ends its reasoning and its answer with the same <|end_message|>, so
+# only the one that follows <|content_thinking|> closes reasoning.
+_INKLING2_THOUGHT = re.compile(r"<\|content_thinking\|>(.*?)(<\|end_message\|>|\Z)", re.DOTALL)
+
+
+def _inkling2_thought_to_think(text: str) -> str:
+    """Rewrite Inkling 2 thinking messages as <think> blocks; one cut before its end stays open."""
+    return _INKLING2_THOUGHT.sub(lambda m: "<think>" + m.group(1) + ("</think>" if m.group(2) else ""), text)
 
 
 # <thinking>...</thinking>, as Ministral-3-Reasoning writes it after its own [/THINK].
@@ -154,8 +167,13 @@ def normalize_reasoning_markup(text: str) -> str:
       <think> blocks; stray channel markers are dropped.
     - Cohere North's ``<|START_THINKING|>`` / ``<|END_THINKING|>`` become
       <think> / </think>.
-    - An ERNIE ``<response>…</response>`` or North
-      ``<|START_TEXT|>…<|END_TEXT|>`` wrapper around the answer is dropped.
+    - K2 Horizon's ``<ifm|think>`` / ``</ifm|think>`` (llama.cpp prints them)
+      become <think> / </think>.
+    - Inkling 2's ``<|content_thinking|>…<|end_message|>`` (llama.cpp with the
+      markers rendered) becomes a <think> block.
+    - An ERNIE ``<response>…</response>``, North
+      ``<|START_TEXT|>…<|END_TEXT|>`` or Inkling 2
+      ``<|content_text|>…<|end_message|>`` wrapper around the answer is dropped.
 
     Text without this markup is returned unchanged, and a second pass changes
     nothing. The result
@@ -164,6 +182,8 @@ def normalize_reasoning_markup(text: str) -> str:
     """
     text = _gemma4_thought_to_think(text)
     text = text.replace("<|START_THINKING|>", "<think>").replace("<|END_THINKING|>", "</think>")
+    text = text.replace("<ifm|think>", "<think>").replace("</ifm|think>", "</think>")
+    text = _inkling2_thought_to_think(text)
     return _unwrap_answer(text)
 
 
@@ -181,6 +201,8 @@ def normalize_vlm_reasoning_markup(text: str) -> str:
     """
     text = _gemma4_thought_to_think(text)
     text = text.replace("<|START_THINKING|>", "<think>").replace("<|END_THINKING|>", "</think>")
+    text = text.replace("<ifm|think>", "<think>").replace("</ifm|think>", "</think>")
+    text = _inkling2_thought_to_think(text)
     text = text.replace("◁think▷", "<think>").replace("◁/think▷", "</think>")
     text = _THINKING_TAG.sub(lambda m: "</think>" if m.group(1) else "<think>", text)
     return _unwrap_answer(text, max_peels=_MAX_PEELS)

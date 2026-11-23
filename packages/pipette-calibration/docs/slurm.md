@@ -48,8 +48,11 @@ Logs go to `<shared-root>/logs/<jobname>-<jobid>_<arrayid>.{out,err}`.
 within the 24h time limit. Each shard writes `completions.shard<N>.jsonl`;
 scoring and verification read all shards transparently.
 
-A dataset with a name other than `default` always runs as one job, with no
-array. This rule also applies to source datasets such as `2026.06.1`.
+`submit` counts the samples in the dataset before it submits. A dataset with
+at most 500 samples (`MAX_UNSHARDED_SAMPLES`), such as a representative
+subset, runs as one job with no array. A larger dataset, such as the source
+dataset `2026.06.1`, runs as `base_shards` array tasks. `submit` stops with an
+error if the dataset is not in the data directory.
 
 ## 5. Adding a model
 

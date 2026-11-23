@@ -141,6 +141,26 @@ _MARKUP_CASES = [
         id="north-off-thinking",
     ),
     pytest.param("Plan.<|END_THINKING|><|START_TEXT|>The answer is", "The answer is", id="north-unclosed"),
+    # K2 Horizon on llama.cpp: the template opens the reasoning, the model prints the close.
+    pytest.param(
+        'The user wants JSON only.</ifm|think>{"city": "Paris"}', '{"city": "Paris"}', id="k2-horizon-llamacpp"
+    ),
+    # Inkling 2 on llama.cpp with its markers rendered: one <|end_message|> ends the reasoning, the next the answer.
+    pytest.param(
+        f"<|content_thinking|>The user wants JSON only.<|end_message|><|content_text|>{_J}<|end_message|>",
+        _J,
+        id="inkling2-on",
+    ),
+    pytest.param(f"<|content_text|>{_J}<|end_message|>", _J, id="inkling2-no-reasoning"),
+    pytest.param(
+        "<|content_thinking|>Plan.<|end_message|><|content_text|>The answer is", "The answer is", id="inkling2-cut"
+    ),
+    pytest.param("<|content_thinking|>The user wants", "", id="inkling2-cut-in-reasoning"),
+    pytest.param(
+        "A turn ends with <|end_message|> in that format.",
+        "A turn ends with <|end_message|> in that format.",
+        id="inkling2-end-marker-mid-text",
+    ),
     # North on llama.cpp without preserved_tokens: every marker is hidden.
     pytest.param(
         f"The user wants JSON only, no prose.{_J}", f"The user wants JSON only, no prose.{_J}", id="north-llamacpp"
