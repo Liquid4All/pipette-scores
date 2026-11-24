@@ -56,7 +56,9 @@ Keep built VLM datasets only in the organization's private storage, under
 `<eval>/<version>/`. At deploy, an init container overlays them onto
 `PIPETTE_SCORES_DATA_DIR`, the same flow as the gated gpqa_diamond dataset.
 The service reads datasets only from its local data directory, never from a
-bucket.
+bucket. With `PIPETTE_SCORES_PACKAGES` set, it also reads digest indexes from
+that packages store, which can be an `s3://` location; an index holds digests,
+not samples.
 Private storage does not lift the terms above: the copies remain
 internal-use only. In particular, do not share the RealWorldQA (CC-BY-ND)
 build onward publicly in any form.

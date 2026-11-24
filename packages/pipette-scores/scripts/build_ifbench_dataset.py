@@ -27,7 +27,7 @@ from pipette_scores.parquet_io import read_parquet
 # --- Upstream source (vendored submodule, pinned by its commit) ---
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 SOURCE_JSONL = _REPO_ROOT / "vendor" / "ifbench" / "data" / "IFBench_test.jsonl"
-SOURCE_COMMIT = "cb932e352a505306ad0115272211df14bb8f628f"  # allenai/IFBench @ 2026-04-11
+SOURCE_COMMIT = "1091c4c3de6c1f6ed12c012ed68f11ea450b0117"  # allenai/IFBench, the vendor/ifbench submodule pin
 
 # --- Expected output (the build asserts against these) ---
 EXPECTED_SAMPLES = 300

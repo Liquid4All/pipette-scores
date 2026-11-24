@@ -5,6 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 
+from pipette_scores import dataset_catalog
 from pipette_scores.types import EvalId
 
 from pipette_calibration.slurm.models import MODELS, ModelSpec, effective_shards
@@ -57,13 +58,18 @@ def submit(
     dry_run: bool = False,
 ) -> None:
     specs = _resolve_models(models)
+    try:
+        n_samples = len(dataset_catalog.load_eval_samples(eval_id, dataset))
+    except FileNotFoundError as e:
+        raise SystemExit(f"cannot count samples to pick the shard count: {e}") from e
 
     if not dry_run:
         for spec in specs:
             _prefetch(spec.hf_id)
 
     for spec in specs:
-        shards = effective_shards(spec, eval_id, dataset)
+        shards = effective_shards(spec, n_samples)
+        logger.info("Submitting %s on %s/%s: %d samples, %d shard(s)", spec.hf_id, eval_id, dataset, n_samples, shards)
         args = [
             "sbatch",
             f"--job-name={eval_id}_{_slug(spec.hf_id)}",

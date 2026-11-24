@@ -109,6 +109,9 @@ Every text-eval scorer grades `grading_text`'s output instead of the raw complet
 |-------|--------------------------|---------|
 | Gemma 4 (llama.cpp) | `<\|channel>thought…<channel\|>`, then the answer | Each channel becomes `<think>…</think>`. An unclosed channel becomes an open `<think>`, which the orphan-open rule removes to the end. A `<channel\|>` with no opener is dropped. This reads the markup as the Gemma 4 chat template's `strip_thinking` does |
 | Cohere North (vLLM, or llama.cpp with the markers rendered) | `<\|START_THINKING\|>`, `<\|END_THINKING\|>` | `<think>`, `</think>` |
+| K2 Horizon (llama.cpp) | `<ifm\|think>`, `</ifm\|think>` | `<think>`, `</think>` |
+| Inkling 2 (llama.cpp with the markers rendered) | `<\|content_thinking\|>…<\|end_message\|>`, then the answer | Becomes `<think>…</think>`. One cut before its `<\|end_message\|>` becomes an open `<think>` |
+| Inkling 2 | `<\|content_text\|>…<\|end_message\|>` around the answer | Dropped |
 | Cohere North | `<\|START_TEXT\|>…<\|END_TEXT\|>` around the answer | Dropped |
 | ERNIE-4.5-Thinking (also behind vLLM's `ernie45` parser) | `<response>…</response>` around the answer | Dropped |
 

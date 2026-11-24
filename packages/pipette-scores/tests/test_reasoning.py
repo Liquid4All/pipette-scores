@@ -133,12 +133,15 @@ FAMILIES = {
     "THINK": ("[THINK]", "[/THINK]"),
     "kimi": ("\u25c1think\u25b7", "\u25c1/think\u25b7"),
     "north": ("<|START_THINKING|>", "<|END_THINKING|>"),
+    "ifm": ("<ifm|think>", "</ifm|think>"),
     "thinking": ("<thinking>", "</thinking>"),
     "gemma": ("<|channel>thought\n", "<channel|>"),
+    "inkling2": ("<|content_thinking|>", "<|end_message|>"),
 }
-# Gemma's <channel|> with no opener before it is a stray marker and is dropped, so a hidden Gemma opener is
-# not one a reply can close.
-HIDDEN_OK = [f for f in FAMILIES if f != "gemma"]
+# Gemma's <channel|> with no opener before it is a stray marker and is dropped, and Inkling 2's <|end_message|>
+# with no opener ends an answer, so a hidden opener of either is not one a reply can close.
+OPENER_SHOWN = ("gemma", "inkling2")
+HIDDEN_OK = [f for f in FAMILIES if f not in OPENER_SHOWN]
 R, A = "The circle is red, so the option is C", "C"
 
 # source -> (opens_reasoning, enable_thinking). visible: the model writes the opener, nothing declared.
@@ -454,8 +457,13 @@ _TOKENS = [
     "</thinking>",
     "<|START_THINKING|>",
     "<|END_THINKING|>",
+    "<ifm|think>",
+    "</ifm|think>",
     "<|channel>thought\n",
     "<channel|>",
+    "<|content_thinking|>",
+    "<|content_text|>",
+    "<|end_message|>",
     "assistantfinal",
     "<answer>",
     "</answer>",
@@ -492,8 +500,8 @@ def test_reasoning_that_a_close_ended_is_never_returned():
         o, c = FAMILIES[family]
         reasoning = " ".join(f"REASON{rng.randint(0, 99)}" for _ in range(rng.randint(1, 6)))
         answer = " ".join(f"ANS{rng.randint(0, 99)}" for _ in range(rng.randint(1, 3)))
-        # Gemma's close with no opener is a stray marker, so its opener is always in the text.
-        visible_opener = family == "gemma" or rng.random() < 0.5
+        # A close of these with no opener does not end reasoning, so their opener is always in the text.
+        visible_opener = family in OPENER_SHOWN or rng.random() < 0.5
         text = (o if visible_opener else "") + reasoning + c + answer
         for thinking, opens in ((None, False), (True, False), (None, True)):
             got = split_reasoning(comp(text, rng.choice(["eos", "truncated"])), thinking, opens_reasoning=opens)
